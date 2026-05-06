@@ -1,0 +1,2529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEXA & Manometry CRF</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#eeecea;--text:#1a1a1a;--text2:#6b6b6b;--text3:#a0a0a0;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+  --green:#1D9E75;--green-bg:#E1F5EE;--blue:#185FA5;--blue-bg:#E6F1FB;
+  --amber:#854F0B;--amber-bg:#FAEEDA;--purple:#534AB7;--purple-bg:#EEEDFE;
+  --radius:8px;--radius-lg:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1a1a1a;--bg2:#252525;--bg3:#2e2e2e;--text:#f0f0f0;--text2:#a0a0a0;--text3:#666;
+  --border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.22);
+  --green-bg:#0a2e20;--blue-bg:#0c1e35;--amber-bg:#2a1800;--purple-bg:#1a1830;
+}}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;}
+.container{max-width:980px;margin:0 auto;padding:1.5rem 1rem;}
+.top-bar{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.top-bar h1{font-size:16px;font-weight:600;}
+.top-bar p{font-size:12px;color:var(--text2);margin-top:2px;}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{padding:8px 14px;border-radius:var(--radius);font-size:13px;cursor:pointer;transition:opacity 0.15s;font-weight:500;border:none;}
+.btn-primary{background:var(--text);color:var(--bg);}
+.btn-secondary{background:transparent;border:0.5px solid var(--border2);color:var(--text);}
+.btn-green{background:var(--green);color:#fff;}
+.btn-purple{background:var(--purple);color:#fff;}
+.btn:hover{opacity:0.8;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.id-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:.75rem;align-items:end;}
+.id-box{background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius);padding:10px 12px;}
+.id-box.hi{border-color:var(--green);background:var(--green-bg);}
+.id-box label{display:block;font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+.id-box.hi label{color:var(--green);}
+.id-box input{width:100%;font-size:13px;border:none;background:transparent;color:var(--text);outline:none;}
+.notice{font-size:11px;color:var(--text3);padding:6px 10px;background:var(--bg2);border-radius:var(--radius);margin-bottom:1rem;border-left:2px solid var(--green);}
+.tab-nav{display:flex;gap:2px;background:var(--bg2);padding:3px;border-radius:var(--radius);margin-bottom:1rem;overflow-x:auto;}
+.tab-btn{flex:1;min-width:72px;padding:7px 10px;font-size:12px;border:none;background:transparent;cursor:pointer;border-radius:6px;color:var(--text2);font-weight:500;white-space:nowrap;transition:all 0.15s;}
+.tab-btn.active{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.tab-btn.tab-opj.active{background:var(--purple-bg);color:var(--purple);}
+.card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1rem;}
+.section{margin-bottom:1.25rem;}
+.sec-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.sec-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.sec-badge.dexa{background:var(--green-bg);color:var(--green);}
+.sec-badge.mano{background:var(--blue-bg);color:var(--blue);}
+.sec-badge.demo{background:var(--amber-bg);color:var(--amber);}
+.sec-badge.opj{background:var(--purple-bg);color:var(--purple);}
+.sec-title{font-size:13px;font-weight:600;}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;}
+.field-grid.wide{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+.field-grid.full{grid-template-columns:1fr;}
+.field{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:8px 10px;transition:border-color .15s;}
+.field:focus-within{border-color:var(--border2);}
+.field.filled{border-color:var(--green);}
+.field.filled label{color:var(--green);}
+.field.filled-opj{border-color:var(--purple);}
+.field.filled-opj label{color:var(--purple);}
+.field label{display:block;font-size:10px;color:var(--text2);margin-bottom:3px;}
+.field input,.field select,.field textarea{width:100%;font-size:13px;border:none;background:transparent;color:var(--text);outline:none;resize:vertical;}
+.field input::placeholder,.field textarea::placeholder{color:var(--text3);}
+.sub-label{font-size:10px;color:var(--text3);grid-column:1/-1;padding:6px 0 2px;font-weight:600;border-top:0.5px solid var(--border);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;}
+.sub-label.first{border-top:none;padding-top:0;margin-top:0;}
+.check-group{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0;}
+.check-item{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;}
+.check-item input{width:auto;cursor:pointer;}
+.completion-wrap{margin-top:.5rem;}
+.completion-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;color:var(--text2);}
+.completion-bar{height:4px;background:var(--bg3);border-radius:2px;}
+.completion-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s;}
+.action-bar{display:flex;gap:8px;margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--border);}
+.action-bar .btn-primary{flex:1;padding:11px;font-size:14px;}
+.record-table{width:100%;border-collapse:collapse;font-size:12px;}
+.record-table th{padding:8px 10px;text-align:left;font-weight:600;color:var(--text2);border-bottom:0.5px solid var(--border2);font-size:11px;text-transform:uppercase;}
+.record-table td{padding:8px 10px;border-bottom:0.5px solid var(--border);}
+.record-table tr:hover td{background:var(--bg2);}
+.tag{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;}
+.tag.ok{background:var(--green-bg);color:#085041;}
+.tag.partial{background:var(--amber-bg);color:var(--amber);}
+.empty-msg{text-align:center;padding:3rem;color:var(--text3);font-size:13px;}
+.field.empty-mano{border-color:var(--text3);}
+.field.empty-mano label{color:var(--text3);}
+.field.empty-mano::after{content:'없음';font-size:12px;color:var(--text3);display:block;margin-top:2px;}
+.opj-ai-panel{background:var(--purple-bg);border:1px dashed var(--purple);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:1rem;}
+.opj-ai-panel h3{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--purple);}
+.ai-panel{background:var(--bg);border:1px dashed var(--border2);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:1rem;}
+.ai-panel h3{font-size:13px;font-weight:600;margin-bottom:8px;}
+.parsed-card{background:var(--bg);border:0.5px solid var(--purple);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1rem;display:none;}
+.parsed-card h4{font-size:12px;font-weight:600;color:var(--purple);margin-bottom:10px;}
+.parsed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin-bottom:8px;}
+.parsed-item{background:var(--bg2);border-radius:var(--radius);padding:7px 10px;}
+.parsed-item-label{font-size:10px;color:var(--text2);margin-bottom:2px;}
+.parsed-item-value{font-size:13px;font-weight:500;color:var(--purple);}
+.pi-block{background:var(--bg2);border-radius:var(--radius);padding:10px;font-size:12px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;margin-top:6px;}
+/* DEXA 뷰어 */
+.dexa-viewer{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1rem;}
+.dexa-ai-panel{background:var(--green-bg);border:1px dashed var(--green);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:1rem;}
+.dexa-ai-panel h3{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--green);}
+.dv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:1rem;}
+.dv-card{background:var(--bg2);border-radius:var(--radius-lg);padding:12px 14px;border:0.5px solid var(--border);}
+.dv-card.hi-green{border-color:var(--green);background:var(--green-bg);}
+.dv-card.hi-amber{border-color:var(--amber);background:var(--amber-bg);}
+.dv-card.hi-blue{border-color:var(--blue);background:var(--blue-bg);}
+.dv-card.hi-purple{border-color:var(--purple);background:var(--purple-bg);}
+.dv-label{font-size:10px;color:var(--text2);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.dv-value{font-size:20px;font-weight:600;color:var(--text);line-height:1.1;}
+.dv-unit{font-size:11px;color:var(--text2);margin-top:2px;}
+.dv-badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:4px;}
+.dv-badge.ok{background:var(--green-bg);color:#085041;}
+.dv-badge.warn{background:var(--amber-bg);color:var(--amber);}
+.dv-badge.info{background:var(--blue-bg);color:var(--blue);}
+.dv-badge.purple{background:var(--purple-bg);color:var(--purple);}
+.dv-bar-wrap{margin-top:6px;}
+.dv-bar-bg{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.dv-bar-fill{height:100%;border-radius:3px;transition:width .5s;}
+.dv-section-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 8px;padding-bottom:4px;border-bottom:0.5px solid var(--border);}
+.dv-imp{background:var(--bg2);border-radius:var(--radius);padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-top:6px;}
+.dv-empty{text-align:center;padding:3rem;color:var(--text3);font-size:13px;}
+/* 초진 폼 레이아웃 */
+.opj-block{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:10px;}
+.opj-block-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:10px;}
+.opj-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.opj-row6{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;}
+.opj-score-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+.opj-score-hint{font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);margin-left:4px;}
+.opj-total{border-color:var(--purple) !important;background:var(--purple-bg) !important;}
+.opj-total label{color:var(--purple) !important;}
+.opj-total input{font-weight:700;color:var(--purple);}
+@media(max-width:700px){.opj-row3{grid-template-columns:1fr 1fr;}.opj-row6{grid-template-columns:1fr 1fr 1fr;}}
+.opj-chk{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:5px 10px;white-space:nowrap;}
+.opj-chk:has(input:checked){border-color:var(--purple);background:var(--purple-bg);color:var(--purple);}
+.opj-chk input{width:auto;cursor:pointer;}
+.opj-form{display:flex;flex-direction:column;gap:0;}
+.opj-row{display:flex;gap:6px;flex-wrap:wrap;}
+.opj-row .field{flex:1;min-width:120px;}
+.opj-divider{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:10px 0 6px;border-bottom:0.5px solid var(--border);margin-bottom:8px;margin-top:10px;}
+.opj-line{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;align-items:flex-end;}
+.opj-line .field{flex:none;}
+.opj-block-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:10px;}
+.opj-block-label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:10px;}
+.chk-group{display:flex;flex-wrap:wrap;gap:5px;}
+.opj-chk{display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:4px 9px;white-space:nowrap;transition:all .15s;}
+.opj-chk input[type=checkbox]{width:auto;cursor:pointer;accent-color:var(--purple);}
+.opj-chk:has(input:checked){border-color:var(--purple);background:var(--purple-bg);color:var(--purple);}
+.pmhx-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;padding:6px 8px;background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border);}
+.pmhx-sel{font-size:12px;border:none;background:transparent;color:var(--text);outline:none;min-width:60px;}
+.pmhx-cat{font-size:12px;border:none;background:transparent;color:var(--text);outline:none;min-width:110px;}
+.pmhx-name{flex:1;font-size:12px;border:none;background:transparent;color:var(--text);outline:none;}
+.pmhx-name::placeholder{color:var(--text3);}
+.pmhx-yr{width:70px;font-size:12px;border:none;background:transparent;color:var(--text);outline:none;text-align:right;}
+.pmhx-del{font-size:16px;color:var(--text3);cursor:pointer;padding:0 4px;line-height:1;background:none;border:none;}
+.pmhx-del:hover{color:#e24b4a;}
+.pmhx-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:2px;}
+.pmhx-table th{padding:5px 8px;text-align:left;font-size:10px;font-weight:600;color:var(--text2);background:var(--bg3);border:0.5px solid var(--border);}
+.pmhx-table td{padding:4px 6px;border:0.5px solid var(--border);vertical-align:middle;}
+.pmhx-table td:first-child{font-size:12px;color:var(--text);white-space:nowrap;width:140px;}
+.pmhx-table td:nth-child(2){width:60px;}
+.pmhx-table td:nth-child(3){width:70px;}
+.pmhx-table select,.pmhx-table input{font-size:12px;border:none;background:transparent;color:var(--text);outline:none;width:100%;}
+.pmhx-table input::placeholder{color:var(--text3);}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="top-bar">
+  <div>
+    <h1>DEXA &amp; Manometry CRF</h1>
+    <p>변실금 코호트 · 논문용 · 개인식별정보 비포함</p>
+  </div>
+  <div class="top-actions">
+    <span id="db-status" style="font-size:11px;color:var(--text2);padding:4px 8px;background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border)">⏳ DB 연결 중...</span>
+    <button class="btn btn-secondary" onclick="switchMain('form')">데이터 입력</button>
+    <button class="btn btn-secondary" onclick="switchMain('list')">기록 목록</button>
+    <button class="btn btn-green" onclick="exportExcel()">엑셀 내보내기</button>
+    <button class="btn btn-secondary" onclick="exportCodebook()" style="border-color:var(--purple);color:var(--purple);">📖 코드북 추출</button>
+  </div>
+</div>
+
+<div id="main-form">
+  <div class="id-row">
+    <div class="id-box hi"><label>영문 이니셜</label>
+        <input type="text" id="reg_no" placeholder="예: KMH" autocomplete="off" oninput="this.value=this.value.toUpperCase();checkDupRegNo(this.value)" maxlength="5" style="text-transform:uppercase;">
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;">성+이름 이니셜 (예: 홍길동 → HGD)</div>
+        <div id="reg-no-warn" style="display:none;font-size:11px;color:#e24b4a;margin-top:3px;padding:4px 8px;background:#fff0f0;border-radius:4px;border:0.5px solid #e24b4a;"></div>
+      </div>
+    <div class="id-box"><label>연구 번호 (자동부여)</label><input type="text" id="study_id" readonly style="cursor:default;color:var(--text2)"></div>
+    <div class="id-box"><label>작성일</label><input type="date" id="meas_date"></div>
+    <button class="btn btn-secondary" onclick="newRecord()">+ 새 환자</button>
+  </div>
+  <div class="notice">⚠ 등록번호는 데이터 매칭 확인용으로만 사용되며, 엑셀 내보내기 시 <strong>별도 시트(ID Mapping)</strong>에만 보관됩니다.</div>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab(0)">📋 입력</button>
+    <button class="tab-btn tab-opj" onclick="switchTab(1)">🏥 초진</button>
+    <button class="tab-btn" id="tab-btn-2" onclick="switchTab(2)">DEXA 체성분</button>
+    <button class="tab-btn" id="tab-btn-3" onclick="switchTab(3)">DEXA 골밀도</button>
+    <button class="tab-btn" id="tab-btn-4" onclick="switchTab(4)" style="color:var(--green)">📊 DEXA 결과</button>
+    <button class="tab-btn" onclick="switchTab(5)">마노메트리</button>
+  </div>
+
+  <!-- DEXA 여부 토글 -->
+  <div id="dexa-toggle-bar" style="display:flex;align-items:center;gap:12px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:1rem;">
+    <span style="font-size:13px;font-weight:600;">이 환자 DEXA 검사 시행 여부</span>
+    <div style="display:flex;gap:6px;margin-left:auto;">
+      <button id="dexa-yes-btn" onclick="setDexaDone(true)" class="btn" style="padding:6px 18px;font-size:12px;background:var(--green);color:#fff;border:none;">✓ 예</button>
+      <button id="dexa-no-btn" onclick="setDexaDone(false)" class="btn btn-secondary" style="padding:6px 18px;font-size:12px;">✗ 아니오</button>
+    </div>
+    <span id="dexa-toggle-label" style="font-size:11px;color:var(--text3);margin-left:8px;">— 선택해주세요</span>
+  </div>
+
+  <!-- 탭0: 입력 (AI 자동입력) -->
+  <div id="tab-0" class="card">
+    <div class="ai-panel">
+      <h3>✨ 전체 자동 입력 — 초진 + DEXA + 마노메트리</h3>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">초진 기록지 텍스트 + DEXA 사진 + 마노메트리 결과를 <strong>Gemini에 한번에</strong> 붙여넣으면 모든 탭이 자동으로 채워집니다.</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-primary" style="flex:1;padding:11px;font-size:14px;" id="copy-prompt-btn">📋 1. 프롬프트 복사</button>
+        <a href="https://gemini.google.com" target="_blank" class="btn btn-secondary" style="flex:1;padding:11px;font-size:14px;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;">🌐 2. Gemini 열기</a>
+      </div>
+
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">3. Gemini에 <strong>초진 텍스트 + DEXA 사진 + 마노메트리 사진</strong> 첨부 후 프롬프트 붙여넣기 → 답변을 아래에 붙여넣고 자동 입력</div>
+      <div style="display:flex;gap:8px">
+        <textarea id="json-paste" placeholder="Gemini 답변을 여기에 붙여넣으세요 — 초진·DEXA·마노메트리 전체 탭 동시 처리됩니다..." style="flex:1;min-height:80px;font-size:12px;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);outline:none;resize:vertical;font-family:monospace;"></textarea>
+        <button class="btn btn-green" style="align-self:flex-end;padding:11px 16px;font-size:14px;" id="apply-json-btn">✓ 자동 입력</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-header"><span class="sec-badge demo">기본정보</span><span class="sec-title">인구통계 및 신체계측</span></div>
+      <div class="field-grid">
+        <div class="field"><label>생년월일</label><input type="date" id="dob" onchange="calcAgeFromDob(this)" style="cursor:pointer;"></div>
+        <div class="field"><label>연령 (세)</label><input type="number" id="age" placeholder="예: 75" oninput="markFilled(this)"></div>
+        <div class="field"><label>성별</label><select id="sex" onchange="markFilled(this)"><option value="">선택</option><option value="0">Female</option><option value="1">Male</option></select></div>
+        <div class="field"><label>신장 (cm)</label><input type="number" step="0.1" id="height" placeholder="142.1" oninput="markFilled(this)"></div>
+        <div class="field"><label>체중 (kg)</label><input type="number" step="0.1" id="weight" placeholder="49.5" oninput="markFilled(this)"></div>
+        <div class="field"><label>BMI (kg/m²)</label><input type="number" step="0.01" id="bmi" placeholder="자동계산" oninput="markFilled(this)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 탭1: 초진 -->
+  <div id="tab-1" class="card" style="display:none">
+
+    <div class="opj-form">
+
+      <!-- 날짜 / CC / 통증 -->
+      <div class="opj-line"><div class="field"><label>초진 날짜</label><input type="date" id="opj_date" onchange="mOpj(this)"></div></div>
+      <div class="opj-line"><div class="field" style="flex:1"><label>Chief Complaint</label><input type="text" id="opj_cc" placeholder="예: incontinence, feces 9YA" oninput="mOpj(this)"></div></div>
+      <div class="opj-line"><div class="field" style="width:180px"><label>통증 유무</label><select id="opj_pain" onchange="mOpj(this)"><option value="">선택</option><option value="1">유</option><option value="0">무</option><option value="9">모름</option></select></div></div>
+
+      <div class="opj-divider">PI · Present Illness</div>
+
+      <!-- 초진 전체 원문 -->
+
+
+      <!-- PI 구조화 코딩 -->
+      <!-- PI 코딩 — 동적 렌더링 (AI가 새 항목 발견 시 자동 추가) -->
+      <div id="pi-coding-box" style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;"></div>
+
+      <!-- FISI -->
+      <div class="opj-line">
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px;border:0.5px solid var(--border);flex:1">
+          <div class="opj-score-title" style="margin-bottom:6px;">FISI <span class="opj-score-hint">0=없음 1=1-3/월 2=1/주 3=2/주 4=1/일 5=2+/일</span></div>
+          <div style="display:flex;gap:6px;align-items:flex-end;">
+            <div class="field" style="flex:1"><label>Gas</label><select id="opj_fi_gas" onchange="mOpj(this)"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+            <div class="field" style="flex:1"><label>Mucus</label><select id="opj_fi_mucus" onchange="mOpj(this)"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+            <div class="field" style="flex:1"><label>Liquid</label><select id="opj_fi_liquid" onchange="mOpj(this)"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+            <div class="field" style="flex:1"><label>Solid</label><select id="opj_fi_solid" onchange="mOpj(this)"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+            <div class="field opj-total" style="width:70px"><label>합계</label><input type="number" id="opj_fisi" oninput="mOpj(this)"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Wexner -->
+      <div class="opj-line">
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px;border:0.5px solid var(--border);flex:1">
+          <div class="opj-score-title" style="margin-bottom:6px;">Wexner <span class="opj-score-hint">0=없음 1=가끔 2=종종 3=매번 4=항상</span></div>
+          <div style="display:flex;gap:6px;align-items:flex-end;">
+            <div class="field" style="flex:1"><label>Solid</label><select id="opj_wx_solid" onchange="mOpj(this);calcWexner()"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+            <div class="field" style="flex:1"><label>Liquid</label><select id="opj_wx_liquid" onchange="mOpj(this);calcWexner()"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+            <div class="field" style="flex:1"><label>Gas</label><select id="opj_wx_gas" onchange="mOpj(this);calcWexner()"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+            <div class="field" style="flex:1"><label>Pad</label><select id="opj_wx_pad" onchange="mOpj(this);calcWexner()"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+            <div class="field" style="flex:1"><label>Life</label><select id="opj_wx_life" onchange="mOpj(this);calcWexner()"><option value="">-</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+            <div class="field opj-total" style="width:70px"><label>합계</label><input type="number" min="0" max="20" id="opj_wexner" oninput="mOpj(this);calcWexner()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prev CVS -->
+      <div class="opj-line">
+        <div class="field" style="width:90px"><label>Prev. CVS</label><select id="opj_cvs_yn" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+        <div class="field" style="width:150px"><label>결과</label><select id="opj_cvs_result" onchange="mOpj(this)"><option value="">선택</option><option value="0">WNL</option><option value="1">폴립 제거</option><option value="2">선종</option><option value="3">암</option><option value="4">기타</option></select></div>
+        <div class="field" style="flex:1"><label>상세</label><input type="text" id="opj_cvs_detail" placeholder="예: polypectomy x1" oninput="mOpj(this)"></div>
+        <div class="field" style="width:100px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_cvs_yr" placeholder="예: 13" oninput="mOpj(this)"></div>
+      </div>
+      <!-- Onset / Episode -->
+      <div class="opj-line">
+        <div class="field" style="width:130px"><label>Onset (년 전)</label><input type="number" min="0" id="opj_onset_yr" placeholder="예: 9" oninput="mOpj(this)"></div>
+        <div class="field" style="width:150px"><label>Episode</label><input type="text" id="opj_episode" placeholder="예: 3/m, 2/w" oninput="mOpj(this)"></div>
+      </div>
+      <!-- Constipation / Diarrhea -->
+      <div class="opj-line">
+        <div class="field" style="width:140px"><label>Constipation</label><select id="opj_constipation" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+        <div class="field" style="width:140px"><label>Diarrhea</label><select id="opj_diarrhea" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+      </div>
+      <!-- Loose stool -->
+      <div class="opj-line"><div class="field" style="width:140px"><label>Loose stool</label><select id="opj_loose" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div></div>
+      <!-- Defecation -->
+      <div class="opj-line"><div class="field" style="width:200px"><label>Defecation</label><input type="text" id="opj_defecation" placeholder="예: 1/d, 1/2d" oninput="mOpj(this)"></div></div>
+
+      <div class="opj-divider">과거력</div>
+
+      <!-- PMHx 블록 카드 -->
+      <div class="opj-block-card">
+        <div class="opj-block-label"><span class="sec-badge opj">PMHx</span> 과거력 / 동반질환</div>
+
+        <div class="opj-line"><div class="field" style="width:160px"><label>Spinal injury</label><select id="opj_spinal" onchange="mOpj(this)"><option value="">선택</option><option value="0">없음</option><option value="1">압박골절</option><option value="2">척추관협착증</option><option value="3">HIVD/디스크</option><option value="4">척추수술</option><option value="5">낙상/외상</option><option value="6">기타</option></select></div><div class="field" style="flex:1"><label>상세</label><input type="text" id="opj_spinal_detail" placeholder="예: 문에 부딪힘" oninput="mOpj(this)"></div><div class="field" style="width:100px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_spinal_yr" placeholder="예: 2" oninput="mOpj(this)"></div></div>
+
+        <div class="opj-line"><div class="field" style="width:160px"><label>Dementia</label><select id="opj_dementia" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div></div>
+
+        <div class="opj-line"><div class="field" style="width:200px"><label>BMI (신장/체중)</label><input type="text" id="opj_bmi_raw" placeholder="예: 163/62" oninput="mOpj(this)"></div></div>
+
+        <div class="opj-line">
+          <div class="field" style="width:160px"><label>Smoking</label><select id="opj_smoking" onchange="mOpj(this)"><option value="">선택</option><option value="0">비흡연</option><option value="1">과거 흡연</option><option value="2">현재 흡연</option></select></div>
+          <div class="field" style="width:100px"><label>기간 (년)</label><input type="number" min="0" id="opj_smoking_yr" placeholder="40" oninput="mOpj(this);calcPackYear()"></div>
+          <div class="field" style="width:100px"><label>하루 흡연량 (갑)</label><input type="number" step="0.1" min="0" id="opj_smoking_ppd" placeholder="1" oninput="mOpj(this);calcPackYear()"></div>
+          <div class="field" style="width:110px"><label>갑년 (자동계산)</label><input type="number" step="0.1" id="opj_smoking_py" readonly style="color:var(--green);cursor:default" placeholder="자동"></div>
+        </div>
+
+        <div class="opj-line">
+          <div class="field" style="width:180px"><label>유산균 복용</label><select id="opj_probiotics" onchange="mOpj(this)"><option value="">선택</option><option value="1">유 (현재 복용 중)</option><option value="0">무 (복용 안 함)</option><option value="2">복용 중단</option></select></div>
+        </div>
+
+        <div class="opj-line">
+          <div class="field" style="width:160px"><label>Prev. anorectal surgery</label><select id="opj_prev_ar_yn" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:200px"><label>종류 <span style="font-weight:400;color:var(--text3);">1=치핵 2=치루 3=괄약근성형 4=STARR 5=기타</span></label><select id="opj_prev_ar_type" onchange="mOpj(this)"><option value="">선택</option><option value="1">1. Hemorrhoidectomy (치핵)</option><option value="2">2. Fistulectomy (치루)</option><option value="3">3. Sphincteroplasty (괄약근성형)</option><option value="4">4. STARR</option><option value="5">5. 기타</option></select></div>
+        <div class="field" style="flex:1"><label>기타 상세</label><input type="text" id="opj_prev_ar_detail" placeholder="5번 선택 시 직접 입력" oninput="mOpj(this)"></div>
+          <div class="field" style="width:100px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_prev_ar_yr" placeholder="예: 4" oninput="mOpj(this)"></div>
+        </div>
+
+        <div class="opj-line">
+          <div class="field" style="width:160px"><label>Hysterectomy / 자궁수술</label><select id="opj_hyst" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="flex:1"><label>종류</label><input type="text" id="opj_hyst_type" placeholder="예: 자궁의 혹" oninput="mOpj(this)"></div>
+          <div class="field" style="width:100px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_hyst_yr" placeholder="예: 15" oninput="mOpj(this)"></div>
+        </div>
+
+        <div class="opj-line">
+          <div class="field" style="width:110px"><label>미혼/무산</label><select id="opj_para_na" onchange="mOpj(this)"><option value="">선택</option><option value="0">분만력 있음</option><option value="1">미혼</option><option value="2">기혼 (분만력 없음)</option></select></div>
+          <div class="field" style="width:110px"><label>총 분만 횟수</label><input type="number" min="0" id="opj_para_total" placeholder="3" oninput="mOpj(this)"></div>
+          <div class="field" style="width:80px"><label>VD</label><input type="number" min="0" id="opj_para_vd" placeholder="3" oninput="mOpj(this)"></div>
+          <div class="field" style="width:80px"><label>CS</label><input type="number" min="0" id="opj_para_cs" placeholder="0" oninput="mOpj(this)"></div>
+          <div class="field" style="width:100px"><label>기계분만</label><select id="opj_para_forceps" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:130px"><label>최대 태아체중 (kg)</label><input type="number" step="0.01" min="0" id="opj_para_max_wt" placeholder="4.19" oninput="mOpj(this)"></div>
+        </div>
+
+        <div class="opj-line">
+          <div class="field" style="width:110px"><label>DM</label><select id="opj_dm" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="flex:1"><label>DM 메모</label><input type="text" id="opj_dm_memo" placeholder="예: 당뇨전단계" oninput="mOpj(this)"></div>
+        </div>
+        <div class="opj-line">
+          <div class="field" style="width:110px"><label>HTN</label><select id="opj_htn" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:80px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_htn_yr" placeholder="예: 5" oninput="mOpj(this)"></div>
+          <div class="field" style="width:110px"><label>HL</label><select id="opj_hl" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:80px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_hl_yr" placeholder="예: 5" oninput="mOpj(this)"></div>
+          <div class="field" style="width:130px"><label>UI (요실금)</label><select id="opj_ui" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:80px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_ui_yr" placeholder="예: 5" oninput="mOpj(this)"></div>
+          <div class="field" style="width:110px"><label>폐경</label><select id="opj_menopause" onchange="mOpj(this)"><option value="">선택</option><option value="0">- (없음)</option><option value="1">+ (있음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:80px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_menopause_yr" placeholder="예: 5" oninput="mOpj(this)"></div>
+        </div>
+        <div class="opj-line">
+          <div class="field" style="width:130px"><label>심혈관질환</label><select id="opj_cardiac" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:80px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_cardiac_yr" placeholder="예: 5" oninput="mOpj(this)"></div>
+          <div class="field" style="width:130px"><label>혈액질환</label><select id="opj_hematologic" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:80px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_hematologic_yr" placeholder="예: 5" oninput="mOpj(this)"></div>
+          <div class="field" style="width:130px"><label>악성종양</label><select id="opj_cancer" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div>
+          <div class="field" style="width:80px"><label>시기 (년 전)</label><input type="number" min="0" id="opj_cancer_yr" placeholder="예: 5" oninput="mOpj(this)"></div>
+          <div class="field" style="flex:1"><label>악성종양 상세</label><input type="text" id="opj_cancer_memo" placeholder="예: 폐암, 표적항암제" oninput="mOpj(this)"></div>
+        </div>
+
+        <!-- Other PMHx — 드롭다운 행추가 방식 -->
+        <div style="margin-top:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:11px;font-weight:600;color:var(--text2);">Other PMHx</span>
+            <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;" onclick="addPmhxRow()">+ 추가</button>
+          </div>
+          <div id="opj-pmhx-rows">
+            <!-- 초기 행 없음 — + 추가로 입력 -->
+          </div>
+          <div style="font-size:10px;color:var(--text3);padding:4px 0;">계통 선택 → 질환명 → 시기 (년 전)</div>
+        </div>
+      </div>
+
+      <div class="opj-divider">PE · DRE</div>
+
+      <!-- PE 블록 카드 -->
+      <div class="opj-block-card">
+        <div class="opj-block-label"><span class="sec-badge opj">PE</span> Physical Examination</div>
+        <div class="opj-line"><div class="field" style="width:220px"><label>Skin irritation</label><select id="opj_skin_irr" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div></div>
+        <div class="opj-line"><div class="field" style="width:220px"><label>Patulus anus</label><select id="opj_patulus" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div></div>
+        <div class="opj-line"><div class="field" style="width:260px"><label>Thickness of the perineal body</label><select id="opj_perineal" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div></div>
+        <div class="opj-line"><div class="field" style="width:220px"><label>Stool staining</label><select id="opj_stool_stain" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div></div>
+        <div class="opj-line"><div class="field" style="width:220px"><label>Feces</label><select id="opj_feces" onchange="mOpj(this)"><option value="">선택</option><option value="1">+ (있음)</option><option value="0">- (없음)</option><option value="9">모름</option></select></div></div>
+      </div>
+
+      <!-- DRE 블록 카드 -->
+      <div class="opj-block-card">
+        <div class="opj-block-label"><span class="sec-badge opj">DRE</span> Digital Rectal Examination</div>
+        <div class="opj-line"><div class="field" style="width:300px"><label>Anal resting tone</label><select id="opj_resting_tone" onchange="mOpj(this)"><option value="">선택</option><option value="1">decreased</option><option value="2">slightly decreased</option><option value="3">WNL / 정상</option><option value="4">increased</option></select></div></div>
+        <div class="opj-line"><div class="field" style="width:300px"><label>Squeeze pressure</label><select id="opj_squeeze" onchange="mOpj(this)"><option value="">선택</option><option value="1">decreased</option><option value="2">slightly / mild decreased</option><option value="3">WNL / 정상</option><option value="4">increased</option></select></div></div>
+        <div class="opj-line"><div class="field" style="width:300px"><label>Muschel coordination</label><select id="opj_muschel" onchange="mOpj(this)"><option value="">선택</option><option value="3">WNL / 정상</option><option value="2">good</option><option value="1">fair / bad</option><option value="0">none</option></select></div></div>
+      </div>
+
+      <div class="opj-divider">A / P</div>
+
+      <!-- A/P 블록 카드 -->
+      <div class="opj-block-card">
+        <div class="opj-block-label"><span class="sec-badge opj">A/P</span> Assessment &amp; Plan</div>
+        <div class="opj-line"><div class="field" style="flex:1"><label>Assessment</label><input type="text" id="opj_assessment" placeholder="예: FI, Rectal prolapse" oninput="mOpj(this)"></div></div>
+        <div class="opj-line"><div class="field" style="flex:1"><label>Plan</label><input type="text" id="opj_plan" placeholder="예: Manometry, MR defecography, MAP-FI" oninput="mOpj(this)"></div></div>
+        <div class="opj-line"><div class="field" style="flex:1"><label>메모</label><input type="text" id="opj_memo" placeholder="자유기재" oninput="mOpj(this)"></div></div>
+      </div>
+      <!-- 초진 전체 원문 -->
+      <div style="margin-top:8px;padding:0 4px;">
+        <label style="font-size:11px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">초진 전체 원문 <span style="font-size:10px;color:var(--text3);font-weight:400;">(Gemini 자동입력 시 저장)</span></label>
+        <textarea id="opj_raw_text" rows="6" placeholder="Gemini 자동입력 시 초진 원문이 여기에 저장됩니다..." style="width:100%;font-family:monospace;font-size:11px;padding:8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);resize:vertical;outline:none;box-sizing:border-box;" oninput="mOpj(this)"></textarea>
+      </div>
+
+    </div>
+
+    <!-- 확인 칸 -->
+    <div style="margin-top:14px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:12px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:600;color:var(--text2);">📋 입력 내용 확인</span>
+        <button class="btn btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="renderOpjCheck()">새로고침</button>
+      </div>
+      <!-- 초진 원문 표시 -->
+      <div id="opj-raw-display" style="display:none;margin-bottom:8px;">
+        <div style="font-size:11px;font-weight:600;color:var(--purple);margin-bottom:4px;">📄 저장된 초진 전체 원문</div>
+        <div id="opj-raw-display-content" style="font-size:11px;line-height:1.7;white-space:pre-wrap;font-family:monospace;background:var(--purple-bg);border:1px solid var(--purple);border-radius:var(--radius);padding:10px 12px;max-height:200px;overflow-y:auto;color:var(--text2);"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;display:none">
+      </div>
+      <div id="opj-check-content" style="font-size:12px;line-height:1.9;white-space:pre-wrap;font-family:monospace;background:var(--bg);border-radius:var(--radius);padding:10px 12px;min-height:50px;color:var(--text2);">— 내용을 입력하면 여기에 표시됩니다 —</div>
+    </div>
+  </div>
+  <!-- 탭2: DEXA 체성분 -->
+  <div id="tab-2" class="card" style="display:none">
+    <div class="section">
+      <div class="sec-header"><span class="sec-badge dexa">DEXA</span><span class="sec-title">구성 (Enhanced Analysis) — 체성분</span></div>
+      <div class="field-grid" style="margin-bottom:10px">
+        <div class="field"><label>DEXA 측정일</label><input type="date" id="dexa_date" onchange="markFilled(this)"></div>
+      </div>
+      <div class="field-grid">
+        <div class="sub-label first">전체 (Total)</div>
+        <div class="field"><label>Tissue %Fat</label><input type="number" step="0.1" id="total_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Centile</label><input type="number" id="total_centile" oninput="markFilled(this)"></div>
+        <div class="field"><label>중량 (kg)</label><input type="number" step="0.1" id="total_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>지방 (g)</label><input type="number" id="total_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>근육 (g)</label><input type="number" id="total_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>BMC (g)</label><input type="number" id="total_bmc_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>비지방량 Fat Free (g)</label><input type="number" id="total_fatfree_g" oninput="markFilled(this)"></div>
+        <div class="sub-label">Arms</div>
+        <div class="field"><label>Arms %Fat</label><input type="number" step="0.1" id="arms_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arms 중량 (kg)</label><input type="number" step="0.1" id="arms_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arms 지방 (g)</label><input type="number" id="arms_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arms 근육 (g)</label><input type="number" id="arms_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arms BMC (g)</label><input type="number" id="arms_bmc_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Right %Fat</label><input type="number" step="0.1" id="arm_r_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Right 중량 (kg)</label><input type="number" step="0.1" id="arm_r_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Right 지방 (g)</label><input type="number" id="arm_r_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Right 근육 (g)</label><input type="number" id="arm_r_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Right BMC (g)</label><input type="number" id="arm_r_bmc_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Left %Fat</label><input type="number" step="0.1" id="arm_l_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Left 중량 (kg)</label><input type="number" step="0.1" id="arm_l_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Left 지방 (g)</label><input type="number" id="arm_l_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Left 근육 (g)</label><input type="number" id="arm_l_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arm Left BMC (g)</label><input type="number" id="arm_l_bmc_g" oninput="markFilled(this)"></div>
+        <div class="sub-label">Legs</div>
+        <div class="field"><label>Legs %Fat</label><input type="number" step="0.1" id="legs_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Legs 중량 (kg)</label><input type="number" step="0.1" id="legs_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Legs 지방 (g)</label><input type="number" id="legs_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Legs 근육 (g)</label><input type="number" id="legs_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Legs BMC (g)</label><input type="number" id="legs_bmc_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Right %Fat</label><input type="number" step="0.1" id="leg_r_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Right 중량 (kg)</label><input type="number" step="0.1" id="leg_r_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Right 지방 (g)</label><input type="number" id="leg_r_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Right 근육 (g)</label><input type="number" id="leg_r_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Right BMC (g)</label><input type="number" id="leg_r_bmc_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Left %Fat</label><input type="number" step="0.1" id="leg_l_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Left 중량 (kg)</label><input type="number" step="0.1" id="leg_l_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Left 지방 (g)</label><input type="number" id="leg_l_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Left 근육 (g)</label><input type="number" id="leg_l_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Leg Left BMC (g)</label><input type="number" id="leg_l_bmc_g" oninput="markFilled(this)"></div>
+        <div class="sub-label">Trunk</div>
+        <div class="field"><label>Trunk %Fat</label><input type="number" step="0.1" id="trunk_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Trunk 중량 (kg)</label><input type="number" step="0.1" id="trunk_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Trunk 지방 (g)</label><input type="number" id="trunk_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Trunk 근육 (g)</label><input type="number" id="trunk_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Trunk BMC (g)</label><input type="number" id="trunk_bmc_g" oninput="markFilled(this)"></div>
+        <div class="sub-label">Android / Gynoid</div>
+        <div class="field"><label>Android %Fat</label><input type="number" step="0.1" id="android_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Android 중량 (kg)</label><input type="number" step="0.1" id="android_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Android 지방 (g)</label><input type="number" id="android_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Android 근육 (g)</label><input type="number" id="android_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Android BMC (g)</label><input type="number" id="android_bmc_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Gynoid %Fat</label><input type="number" step="0.1" id="gynoid_fat_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Gynoid 중량 (kg)</label><input type="number" step="0.1" id="gynoid_mass_kg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Gynoid 지방 (g)</label><input type="number" id="gynoid_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Gynoid 근육 (g)</label><input type="number" id="gynoid_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Gynoid BMC (g)</label><input type="number" id="gynoid_bmc_g" oninput="markFilled(this)"></div>
+        <div class="sub-label">Korea 추세</div>
+        <div class="field"><label>A/G 비율</label><input type="number" step="0.01" id="ag_ratio" oninput="markFilled(this)"></div>
+        <div class="field"><label>남성형 %Fat</label><input type="number" step="0.1" id="android_fat_korea" oninput="markFilled(this)"></div>
+        <div class="field"><label>여성형 %Fat</label><input type="number" step="0.1" id="gynoid_fat_korea" oninput="markFilled(this)"></div>
+        <div class="field"><label>Korea 추세 조직 (g)</label><input type="number" id="korea_tissue_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Korea 추세 지방 (g)</label><input type="number" id="korea_fat_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Korea 추세 근육 (g)</label><input type="number" id="korea_lean_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Korea 추세 BMC (g)</label><input type="number" id="korea_bmc_g" oninput="markFilled(this)"></div>
+        <div class="field"><label>Korea 추세 비지방 (g)</label><input type="number" id="korea_fatfree_g" oninput="markFilled(this)"></div>
+        <div class="sub-label">근감소증 지표</div>
+        <div class="field"><label>ASMM (kg) — 자동계산</label><input type="number" step="0.01" id="asmm" readonly style="color:var(--green);cursor:default"></div>
+        <div class="field"><label>ASMI / SMI (kg/m²) — 자동계산</label><input type="number" step="0.01" id="asmi" readonly style="color:var(--green);cursor:default"></div>
+        <div class="field"><label>근감소증 진단 — 자동판정</label><select id="sarco_dx" onchange="markFilled(this)"><option value="">선택</option><option value="0">없음</option><option value="1">근감소증 전단계</option><option value="2">근감소증</option><option value="3">중증 근감소증</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 탭3: DEXA 골밀도 -->
+  <div id="tab-3" class="card" style="display:none">
+    <div class="section">
+      <div class="sec-header"><span class="sec-badge dexa">DEXA</span><span class="sec-title">골밀도 BMD (Enhanced Analysis)</span></div>
+      <div class="field-grid">
+        <div class="sub-label first">부위별 BMD (g/cm²)</div>
+        <div class="field"><label>Head BMD</label><input type="number" step="0.001" id="bmd_head" oninput="markFilled(this)"></div>
+        <div class="field"><label>Arms BMD</label><input type="number" step="0.001" id="bmd_arms" oninput="markFilled(this)"></div>
+        <div class="field"><label>Legs BMD</label><input type="number" step="0.001" id="bmd_legs" oninput="markFilled(this)"></div>
+        <div class="field"><label>Trunk BMD</label><input type="number" step="0.001" id="bmd_trunk" oninput="markFilled(this)"></div>
+        <div class="field"><label>Ribs BMD</label><input type="number" step="0.001" id="bmd_ribs" oninput="markFilled(this)"></div>
+        <div class="field"><label>Spine BMD</label><input type="number" step="0.001" id="bmd_spine" oninput="markFilled(this)"></div>
+        <div class="field"><label>Pelvis BMD</label><input type="number" step="0.001" id="bmd_pelvis" oninput="markFilled(this)"></div>
+        <div class="field"><label>Total BMD</label><input type="number" step="0.001" id="bmd_total" oninput="markFilled(this)"></div>
+        <div class="sub-label">T-score / Z-score (Korea 기준)</div>
+        <div class="field"><label>YA %</label><input type="number" id="ya_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>YA T-score</label><input type="number" step="0.1" id="ya_tscore" oninput="markFilled(this)"></div>
+        <div class="field"><label>AM %</label><input type="number" id="am_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>AM Z-score</label><input type="number" step="0.1" id="am_zscore" oninput="markFilled(this)"></div>
+        <div class="sub-label">WHO BMI 분류</div>
+        <div class="field"><label>BMI (DEXA 측정)</label><input type="number" step="0.01" id="bmi_dxa" oninput="markFilled(this)"></div>
+        <div class="field"><label>WHO 분류</label><select id="who_class" onchange="markFilled(this)"><option value="">선택</option><option value="0">Underweight</option><option value="1">Normal</option><option value="2">Overweight</option><option value="3">Obese</option></select></div>
+        <div class="field"><label>골다공증 진단</label><select id="osteo_dx" onchange="markFilled(this)"><option value="">선택</option><option value="0">정상</option><option value="1">골감소증</option><option value="2">골다공증</option></select></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 탭4: DEXA 결과 뷰어 -->
+  <div id="tab-4" class="card" style="display:none">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;padding:8px 10px;background:var(--green-bg);border-radius:var(--radius);border-left:3px solid var(--green);">
+      인구통계 탭에서 Gemini 답변을 붙여넣고 <strong>✓ 자동 입력</strong>을 누르면 이 탭에 자동으로 표시됩니다.
+    </div>
+    <div id="dexa-viewer-content">
+      <div class="dv-empty">인구통계 탭 → Gemini 자동 입력 후 이곳에 결과가 표시됩니다.</div>
+    </div>
+  </div>
+  <!-- 탭5: 마노메트리 -->
+  <div id="tab-5" class="card" style="display:none">
+    <div class="section">
+      <div class="sec-header"><span class="sec-badge mano">Manometry</span><span class="sec-title">항문직장 압력검사 (Anorectal Manometry)</span></div>
+      <div class="field-grid" style="margin-bottom:10px">
+        <div class="field"><label>마노메트리 측정일</label><input type="date" id="mano_date" onchange="markFilled(this)"></div>
+      </div>
+      <div class="field-grid">
+        <div class="sub-label first">Anal Sphincter Tone</div>
+        <div class="field"><label>Anal Sphincter Tone</label><select id="sphincter_tone" onchange="markFilled(this)"><option value="">선택</option><option value="1">저하</option><option value="2">정상</option><option value="3">증가</option></select></div>
+        <div class="sub-label">안정 시 압력 (Resting)</div>
+        <div class="field"><label>Resting Pressure Mean (mmHg)</label><input type="number" step="0.1" id="rest_mean" oninput="markFilled(this)"></div>
+        <div class="field"><label>Resting Vectogram</label><input type="number" step="0.1" id="rest_vec" oninput="markFilled(this)"></div>
+        <div class="sub-label">수축 시 압력 (Squeezing)</div>
+        <div class="field"><label>Squeezing Max (mmHg)</label><input type="number" step="0.1" id="sq_max" oninput="markFilled(this)"></div>
+        <div class="field"><label>Squeezing Vectogram</label><input type="number" step="0.1" id="sq_vec" oninput="markFilled(this)"></div>
+        <div class="field"><label>Sustained Duration (sec)</label><input type="number" step="0.1" id="sus_dur" oninput="markFilled(this)"></div>
+        <div class="sub-label">괄약근 구조</div>
+        <div class="field"><label>Sphincter Length (cm)</label><input type="number" step="0.1" id="sph_len" oninput="markFilled(this)"></div>
+        <div class="field"><label>High Pressure Zone (cm)</label><input type="number" step="0.1" id="hpz" oninput="markFilled(this)"></div>
+        <div class="sub-label">직장 감각 (Rectal Sensation)</div>
+        <div class="field"><label>Minimal Volume (mL)</label><input type="number" id="rs_min" oninput="markFilled(this)"></div>
+        <div class="field"><label>Urgency Volume (mL)</label><input type="number" id="rs_urg" oninput="markFilled(this)"></div>
+        <div class="field"><label>Maximal Volume MTV (mL)</label><input type="number" id="cv_max" oninput="markFilled(this)"></div>
+        <div class="sub-label">반사 및 기타</div>
+        <div class="field"><label>RAIR Positive (mL)</label><input type="number" step="0.1" id="rair" oninput="markFilled(this)"></div>
+        <div class="field"><label>RAIR 결과</label><select id="rair_result" onchange="markFilled(this)"><option value="">선택</option><option value="1">Positive</option><option value="0">Negative</option></select></div>
+        <div class="field"><label>Coughing Reflex (%)</label><input type="number" step="0.1" id="cough_pct" oninput="markFilled(this)"></div>
+        <div class="field"><label>Coughing Reflex 결과</label><select id="cough_ref" onchange="markFilled(this)"><option value="">선택</option><option value="1">Positive</option><option value="0">Negative</option></select></div>
+        <div class="sub-label">Balloon Expulsion Test</div>
+        <div class="field"><label>BET 결과</label><select id="bet" onchange="markFilled(this)"><option value="">선택</option><option value="1">Normal</option><option value="0">Abnormal</option><option value="9">Not done</option></select></div>
+        <div class="field"><label>BET 시간 (min)</label><input type="number" step="0.1" id="bet_min" oninput="markFilled(this)"></div>
+        <div class="sub-label">Bearing Down Maneuver</div>
+        <div class="field"><label>직장압 상승 (mmHg)</label><input type="number" step="0.1" id="bd_rectal_pr" oninput="markFilled(this)"></div>
+        <div class="field"><label>항문압 (mmHg)</label><input type="number" step="0.1" id="bd_anal_pr" oninput="markFilled(this)"></div>
+        <div class="field"><label>직장압 상승 결과</label><select id="bd_rectal_result" onchange="markFilled(this)"><option value="">선택</option><option value="1">Normal elevation (>45mmHg)</option><option value="0">Insufficient elevation</option><option value="0">Decreased</option></select></div>
+        <div class="field"><label>항문 이완 결과</label><select id="bd_anal_result" onchange="markFilled(this)"><option value="">선택</option><option value="1">Normal relaxation (>20%)</option><option value="0">Incomplete relaxation</option><option value="2">Paradoxical contraction</option></select></div>
+        <div class="sub-label">측정 시점</div>
+        <div class="field"><label>측정 시점</label><select id="mano_timing" onchange="markFilled(this)"><option value="">선택</option><option value="0">초진</option><option value="1">치료 전</option><option value="2">치료 후</option><option value="3">수술 전</option><option value="4">수술 후</option><option value="5">추적관찰 1</option><option value="6">추적관찰 2</option><option value="7">추적관찰 3</option></select></div>
+        <div class="field"><label>측정 차수</label><input type="number" id="mano_seq" placeholder="1, 2, 3..." oninput="markFilled(this)"></div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Impression (진단 소견)</div>
+        <div class="check-group" style="flex-direction:column;gap:5px">
+          <label class="check-item"><input type="checkbox" id="imp_dec_resting"> Decreased anal resting pressure</label>
+          <label class="check-item"><input type="checkbox" id="imp_dec_squeeze"> Decreased squeezing pressure</label>
+          <label class="check-item"><input type="checkbox" id="imp_inapp_rair"> Inappropriate RAIR</label>
+          <label class="check-item"><input type="checkbox" id="imp_normal_cough"> Normal cough reflex</label>
+          <label class="check-item"><input type="checkbox" id="imp_dec_sensation"> Decreased rectal sensation in minimal volume state</label>
+          <label class="check-item"><input type="checkbox" id="imp_success_bet"> Successful balloon expulsion test</label>
+          <label class="check-item"><input type="checkbox" id="imp_fail_bet"> Failed balloon expulsion test</label>
+          <label class="check-item"><input type="checkbox" id="imp_insuff_elev"> Insufficient elevation of rectal pressure during bearing down</label>
+          <label class="check-item"><input type="checkbox" id="imp_paradox"> Paradoxical contraction of anal sphincter during bearing down</label>
+        </div>
+        <div style="margin-top:8px">
+          <div class="field"><label>Impression 기타 / 최종 진단</label><textarea id="imp_text" rows="2" placeholder="예: Pelvic dyssynergia type II..." oninput="markFilled(this)"></textarea></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="completion-wrap">
+    <div class="completion-top"><span>입력 완성도 (주요 항목)</span><span id="completion-pct" style="font-weight:600">0%</span></div>
+    <div class="completion-bar"><div class="completion-fill" id="completion-fill" style="width:0%"></div></div>
+  </div>
+  <div class="action-bar">
+    <button class="btn btn-secondary" onclick="clearForm()">초기화</button>
+    <button class="btn btn-primary" onclick="saveRecord()">이 환자 저장</button>
+    <button class="btn btn-green" onclick="exportExcel()">엑셀 내보내기</button>
+  </div>
+</div>
+
+<!-- 목록 뷰 -->
+<div id="main-list" style="display:none">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:14px;font-weight:600">저장된 환자 목록</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <div style="display:flex;gap:2px;background:var(--bg2);padding:3px;border-radius:var(--radius);">
+          <button id="filter-all-btn" class="btn" onclick="setListFilter('all')" style="padding:5px 12px;font-size:12px;background:var(--text);color:var(--bg);border:none;">전체</button>
+          <button id="filter-dexa-btn" class="btn btn-secondary" onclick="setListFilter('dexa')" style="padding:5px 12px;font-size:12px;">DEXA만</button>
+          <button id="filter-nodexa-btn" class="btn btn-secondary" onclick="setListFilter('nodexa')" style="padding:5px 12px;font-size:12px;">DEXA 미시행</button>
+        </div>
+        <button class="btn btn-green" onclick="exportExcel('all')">전체 엑셀</button>
+        <button class="btn" onclick="exportExcel('dexa')" style="background:var(--green-bg);color:var(--green);border:0.5px solid var(--green);font-size:13px;">DEXA만 엑셀</button>
+        <button class="btn btn-secondary" onclick="exportCodebook()" style="font-size:12px;border-color:var(--purple);color:var(--purple);">📖 코드북</button>
+        <button class="btn btn-secondary" onclick="clearAllRecords()" style="font-size:12px;color:#e24b4a;">전체 삭제</button>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <input type="text" id="list-search" placeholder="🔍 연구번호, 이름, CC, 초진일 검색..." oninput="renderList()" style="width:100%;padding:8px 12px;font-size:13px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;">
+    </div>
+    <div id="selection-bar" style="display:none;background:var(--blue-bg);border:0.5px solid var(--blue);border-radius:var(--radius);padding:8px 12px;margin-bottom:8px;align-items:center;gap:10px;">
+      <span id="selection-count" style="font-size:12px;font-weight:600;color:var(--blue);">0명 선택됨</span>
+      <button class="btn" onclick="exportExcel('selected')" style="padding:5px 14px;font-size:12px;background:var(--blue);color:#fff;border:none;">선택 환자 엑셀 추출</button>
+      <button class="btn btn-secondary" onclick="deleteSelectedRecords()" style="padding:5px 12px;font-size:12px;color:#e24b4a;border-color:#e24b4a;">🗑 선택 삭제</button>
+      <button class="btn btn-secondary" onclick="clearSelection()" style="padding:5px 12px;font-size:12px;">선택 해제</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="record-table">
+        <thead><tr>
+          <th style="width:32px;"><input type="checkbox" id="select-all-chk" onchange="toggleSelectAll(this)" style="cursor:pointer;"></th>
+          <th style='color:var(--text3);font-weight:400;'>입력일</th><th>연구번호</th><th>초진일</th><th>Chief Complaint</th><th>FISI</th><th>Wexner</th><th>DEXA</th><th>DEXA 측정일</th><th>연령/성별</th><th>완성도</th><th></th>
+        </tr></thead>
+        <tbody id="record-tbody"></tbody>
+      </table>
+    </div>
+    <div id="empty-msg" class="empty-msg">저장된 기록이 없습니다</div>
+  </div>
+</div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const cfg={apiKey:"AIzaSyCDC-YVwQV_5h6BkNfCZjFS4ZIrb-T9YoU",authDomain:"dexa-mano-db.firebaseapp.com",projectId:"dexa-mano-db",storageBucket:"dexa-mano-db.firebasestorage.app",messagingSenderId:"1045384715709",appId:"1:1045384715709:web:c98cad9c37d6ca2fe506d4"};
+const app=initializeApp(cfg);
+const db=getFirestore(app);
+const COL='records';
+
+window.loadFromFirebase=async function(){
+  try{
+    const snap=await getDocs(query(collection(db,COL),orderBy('study_id')));
+    window._records=[];
+    snap.forEach(d=>window._records.push({_fireId:d.id,...d.data()}));
+    if(typeof renderList==='function')renderList();
+    if(typeof updateStatus==='function')updateStatus('✅ DB 연결됨 — '+window._records.length+'명 로드');
+  }catch(e){
+    console.error('Firebase load error:',e);
+    if(typeof updateStatus==='function')updateStatus('⚠️ DB 오류: '+e.message);
+  }
+};
+
+window.saveToFirebase=async function(d){
+  try{
+    const data={...d};
+    const fireId=data._fireId; delete data._fireId;
+    if(fireId){
+      await setDoc(doc(db,COL,fireId),data);
+    }else{
+      const ref=await addDoc(collection(db,COL),data);
+      d._fireId=ref.id;
+    }
+    return true;
+  }catch(e){console.error('Firebase save error:',e);return false;}
+};
+
+window.deleteFromFirebase=async function(fid){
+  try{await deleteDoc(doc(db,COL,fid));return true;}
+  catch(e){console.error(e);return false;}
+};
+
+window._firebaseReady=true;
+window.dispatchEvent(new Event('firebaseReady'));
+window.loadFromFirebase();
+</script>
+
+<script>
+let records=[],currentStudyId=generateId(),currentDexaDone=null,currentListFilter='all',selectedIds=new Set();
+const OPJ_FIELDS=['opj_date','opj_cc','opj_pain','opj_pi_text','opj_raw_text','pi_tx_other','opj_probiotics','opj_htn','opj_htn_yr','opj_hl','opj_hl_yr','opj_ui','opj_ui_yr','opj_menopause','opj_menopause_yr','opj_cardiac','opj_cardiac_yr','opj_hematologic','opj_hematologic_yr','opj_cancer','opj_cancer_yr','opj_cancer_memo','opj_fi_gas','opj_fi_mucus','opj_fi_liquid','opj_fi_solid','opj_fisi','opj_wx_solid','opj_wx_liquid','opj_wx_gas','opj_wx_pad','opj_wx_life','opj_wexner','opj_cvs_yn','opj_cvs_result','opj_cvs_detail','opj_cvs_yr','opj_onset_yr','opj_episode','opj_constipation','opj_diarrhea','opj_loose','opj_defecation','opj_spinal','opj_spinal_detail','opj_spinal_yr','opj_dementia','opj_bmi_raw','opj_smoking','opj_smoking_yr','opj_smoking_ppd','opj_smoking_py','opj_prev_ar_yn','opj_prev_ar_type','opj_prev_ar_yr','opj_prev_ar_detail','opj_hyst','opj_hyst_type','opj_hyst_yr','opj_para_na','opj_para_total','opj_para_vd','opj_para_cs','opj_para_forceps','opj_para_max_wt','opj_dm','opj_dm_memo','opj_skin_irr','opj_patulus','opj_perineal','opj_stool_stain','opj_feces','opj_resting_tone','opj_squeeze','opj_muschel','opj_assessment','opj_plan','opj_memo'];
+var MANO_FIELDS=['mano_date','sphincter_tone','rest_mean','rest_vec','sq_max','sq_vec','sus_dur','sph_len','hpz','rs_min','rs_urg','cv_max','rair','rair_result','cough_pct','cough_ref','bet','bet_min','bd_rectal_pr','bd_anal_pr','bd_rectal_result','bd_anal_result','mano_timing','mano_seq','imp_text'];
+var OPJ_CHECKS=['pi_sit_passive','pi_sit_postdefec','pi_sit_strain','pi_sit_nocturnal','pi_sit_urge','pi_sx_gas','pi_sx_mucus','pi_sx_liquid','pi_sx_solid','pi_lk_leak','pi_lk_soiling','pi_pad','pi_ag_dairy','pi_ag_fruit','pi_ag_food','pi_ag_other','pi_ag_diarrhea','pi_ag_loose','pi_ag_cough','pi_ag_stress','pi_ag_postdefec','pi_ag_exercise','pi_crs_worsening','pi_crs_intermittent','pi_crs_recent_worse','pi_tx_none','pi_tx_drug','pi_tx_bio','pi_tx_pfe','pi_tx_op','pi_tx_electric'];
+var OPJ_CHECKS_DYNAMIC=[];
+const ALL_FIELDS=['dob','age','sex','height','weight','bmi','dexa_date','total_fat_pct','total_centile','total_mass_kg','total_fat_g','total_lean_g','total_bmc_g','total_fatfree_g','arms_fat_pct','arms_mass_kg','arms_fat_g','arms_lean_g','arms_bmc_g','arm_r_fat_pct','arm_r_mass_kg','arm_r_fat_g','arm_r_lean_g','arm_r_bmc_g','arm_l_fat_pct','arm_l_mass_kg','arm_l_fat_g','arm_l_lean_g','arm_l_bmc_g','legs_fat_pct','legs_mass_kg','legs_fat_g','legs_lean_g','legs_bmc_g','leg_r_fat_pct','leg_r_mass_kg','leg_r_fat_g','leg_r_lean_g','leg_r_bmc_g','leg_l_fat_pct','leg_l_mass_kg','leg_l_fat_g','leg_l_lean_g','leg_l_bmc_g','trunk_fat_pct','trunk_mass_kg','trunk_fat_g','trunk_lean_g','trunk_bmc_g','android_fat_pct','android_mass_kg','android_fat_g','android_lean_g','android_bmc_g','gynoid_fat_pct','gynoid_mass_kg','gynoid_fat_g','gynoid_lean_g','gynoid_bmc_g','ag_ratio','android_fat_korea','gynoid_fat_korea','korea_tissue_g','korea_fat_g','korea_lean_g','korea_bmc_g','korea_fatfree_g','asmi','asmm','sarco_dx','bmd_head','bmd_arms','bmd_legs','bmd_trunk','bmd_ribs','bmd_spine','bmd_pelvis','bmd_total','ya_pct','ya_tscore','am_pct','am_zscore','bmi_dxa','who_class','osteo_dx','mano_date','sphincter_tone','rest_mean','rest_vec','sq_max','sq_vec','sus_dur','sph_len','hpz','rs_min','rs_urg','cv_max','rair','rair_result','cough_pct','cough_ref','bet','bet_min','bd_rectal_pr','bd_anal_pr','bd_rectal_result','bd_anal_result','mano_timing','mano_seq','imp_text'];
+const CHECKBOX_FIELDS=['imp_dec_resting','imp_dec_squeeze','imp_inapp_rair','imp_normal_cough','imp_dec_sensation','imp_success_bet','imp_fail_bet','imp_insuff_elev','imp_paradox'];
+// 년도 텍스트 → "몇 년 전" 숫자 변환
+function parseYrText(txt){
+  if(!txt)return '';
+  var s=String(txt).trim();
+  var now=new Date().getFullYear();
+  // 이미 숫자(년전)면 그대로
+  if(/^\d+$/.test(s)&&parseInt(s)<100)return parseInt(s);
+  // "2년 전", "2YA", "2MA" (월→년 변환)
+  var ya=s.match(/(\d+)\s*(?:ya|년\s*전|년전|years?\s*ago)/i);
+  if(ya)return parseInt(ya[1]);
+  var ma=s.match(/(\d+)\s*(?:ma|개월\s*전|달\s*전|months?\s*ago)/i);
+  if(ma)return Math.round(parseInt(ma[1])/12);
+  // "2006년", "2006" (연도)
+  var yr=s.match(/(\d{4})년?/);
+  if(yr){var y=parseInt(yr[1]);if(y>1900&&y<=now)return now-y;}
+  return '';
+}
+function generateId(){
+  var yr=new Date().getFullYear();
+  var allRecs=window._records||records||[];
+  // 기존 ID에서 사용된 번호 추출
+  var usedNums=new Set();
+  allRecs.forEach(function(r){
+    if(r.study_id){
+      var m=r.study_id.match(/DM-(\d+)-\d+/);
+      if(m)usedNums.add(parseInt(m[1]));
+    }
+  });
+  // 중복 없는 다음 번호 찾기
+  var n=1;
+  while(usedNums.has(n))n++;
+  return 'DM-'+String(n).padStart(4,'0')+'-'+yr;
+}
+function init(){
+  // Firebase 로드 후 study_id 갱신
+  setTimeout(function(){
+    currentStudyId=generateId();
+    var sid=document.getElementById('study_id');
+    if(sid)sid.value=currentStudyId;
+  },1500);
+  document.getElementById('study_id').value=currentStudyId;
+  document.getElementById('meas_date').value=new Date().toISOString().slice(0,10);
+}
+function checkDupRegNo(val){
+  var warn=document.getElementById('reg-no-warn');
+  if(!warn)return;
+  val=(val||'').trim();
+  if(!val){warn.style.display='none';return;}
+  var allRecs=window._records||records||[];
+  var dup=allRecs.filter(function(r){
+    return r.reg_no&&r.reg_no.trim()===val&&r.study_id!==currentStudyId;
+  });
+  if(dup.length){
+    warn.style.display='block';
+    warn.innerHTML='⚠️ 같은 이니셜의 대상자가 있습니다 — '
+      +dup.map(function(r){return '<strong>'+r.study_id+'</strong> (초진: '+(r.opj_date||'-')+')';}).join(', ');
+  }else{
+    warn.style.display='none';
+  }
+}
+function markFilled(el){var p=el.closest('.field');if(p)p.classList.toggle('filled',el.value!=='');updateCompletion();calcASMM();}
+function calcAgeFromDob(el){
+  var p=el.closest('.field');if(p)p.classList.toggle('filled',el.value!=='');
+  if(!el.value)return;
+  var dob=new Date(el.value),today=new Date();
+  var age=today.getFullYear()-dob.getFullYear();
+  var m=today.getMonth()-dob.getMonth();
+  if(m<0||(m===0&&today.getDate()<dob.getDate()))age--;
+  var ageEl=document.getElementById('age');
+  if(ageEl){ageEl.value=age;ageEl.closest('.field').classList.toggle('filled',true);}
+  updateCompletion();
+}
+function calcDobFromAge(el){
+  updateCompletion();
+}
+function mOpj(el){
+  if(el.type==='checkbox'){updateCompletion();renderOpjCheck();return;}
+  var p=el.closest('.field');
+  if(p){p.classList.remove('filled');p.classList.toggle('filled-opj',el.value!=='');}
+  updateCompletion();
+  renderOpjCheck();
+}
+function calcWexner(){
+  var ids=['opj_wx_solid','opj_wx_liquid','opj_wx_gas','opj_wx_pad','opj_wx_life'];
+  var allFilled=ids.every(id=>{var e=document.getElementById(id);return e&&e.value!=='';});
+  if(!allFilled)return;
+  var total=ids.reduce((s,id)=>{var e=document.getElementById(id);return s+(parseInt(e.value)||0);},0);
+  var we=document.getElementById('opj_wexner');
+  if(we){we.value=total;var p=we.closest('.field');if(p){p.classList.remove('filled');p.classList.add('filled-opj');}}
+  updateCompletion();
+}
+
+// ====================================================
+// PI 코딩 시스템
+
+// 기본 내장 항목 (항상 존재)
+var PI_DEFAULT_ITEMS = [
+  {id:'pi_sit_passive',  group:'주요 발생 상황', label:'나도 모르게',              desc:'느낌 없이/수동형으로 새는 경우'},
+  {id:'pi_sit_postdefec',group:'주요 발생 상황', label:'변 본 후',                desc:'배변 후 잔변이 나오는 경우'},
+  {id:'pi_sit_strain',   group:'주요 발생 상황', label:'힘줄 때',                 desc:'힘줄 때/기침할 때 새는 경우'},
+  {id:'pi_sit_nocturnal',group:'주요 발생 상황', label:'수면 중',                 desc:'수면 중/잠잘 때 새는 경우'},
+  {id:'pi_sit_urge',     group:'주요 발생 상황', label:'절박 (urge)',             desc:'급박함/참지 못하는 경우'},
+  {id:'pi_sx_gas',       group:'양상',           label:'가스',                   desc:'가스 누출'},
+  {id:'pi_sx_mucus',     group:'양상',           label:'점액',                   desc:'점액 누출'},
+  {id:'pi_sx_liquid',    group:'양상',           label:'액체변',                 desc:'액체변 누출'},
+  {id:'pi_sx_solid',     group:'양상',           label:'고체변',                 desc:'고체변 누출'},
+  {id:'pi_lk_leak',      group:'누출 양상',       label:'조금씩 샘',              desc:'소량씩 새는 경우'},
+  {id:'pi_lk_soiling',   group:'누출 양상',       label:'속옷 오염',              desc:'속옷/팬티에 묻어있는 경우'},
+  {id:'pi_pad',          group:'Pad 사용',        label:'Pad / 휴지 항상 사용',   desc:'pad나 휴지를 항상/자주 사용'},
+  {id:'pi_ag_dairy',     group:'악화인자',        label:'유제품',                 desc:'유제품 섭취 후 악화'},
+  {id:'pi_ag_fruit',     group:'악화인자',        label:'과일',                   desc:'과일 섭취 후 악화'},
+  {id:'pi_ag_food',      group:'악화인자',        label:'특정 음식',              desc:'특정 음식 섭취 후 악화'},
+  {id:'pi_ag_other',     group:'악화인자',        label:'기타 음식',              desc:'기타 음식 섭취 후 악화'},
+  {id:'pi_ag_diarrhea',  group:'악화인자',        label:'설사',                   desc:'설사 시 악화'},
+  {id:'pi_ag_loose',     group:'악화인자',        label:'묽은 변',                desc:'묽은 변/연변일 때 악화'},
+  {id:'pi_ag_cough',     group:'악화인자',        label:'기침/재채기',            desc:'복압 상승 시 악화'},
+  {id:'pi_ag_stress',    group:'악화인자',        label:'긴장/스트레스',          desc:'긴장하거나 스트레스 받을 때'},
+  {id:'pi_ag_postdefec', group:'악화인자',        label:'변 본 후',               desc:'배변 후 누출'},
+  {id:'pi_ag_exercise',  group:'악화인자',        label:'운동 시',                desc:'걷기 운동 등 활동 시 악화'},
+  {id:'pi_crs_worsening',group:'경과',            label:'점점 심해짐',            desc:'시간이 지나며 점점 심해지는 경우'},
+  {id:'pi_crs_intermittent',group:'경과',         label:'간헐적 반복',            desc:'좋아졌다 나빠지기를 반복'},
+  {id:'pi_crs_recent_worse',group:'경과',         label:'최근 갑자기 악화',       desc:'최근 급격히 심해진 경우'},
+  {id:'pi_tx_none',      group:'이전 치료',       label:'N/A (없음)',             desc:'치료 이력 없음'},
+  {id:'pi_tx_drug',      group:'이전 치료',       label:'약물',                   desc:'이전 약물치료 이력'},
+  {id:'pi_tx_bio',       group:'이전 치료',       label:'바이오피드백',           desc:'이전 바이오피드백 이력'},
+  {id:'pi_tx_pfe',       group:'이전 치료',       label:'골반저 운동',            desc:'골반저 운동 치료 이력'},
+  {id:'pi_tx_op',        group:'이전 치료',       label:'수술',                   desc:'수술 치료 이력'},
+  {id:'pi_tx_electric',  group:'이전 치료',       label:'전기치료',               desc:'전기치료/전기자극 이력'}];
+
+function getAllPiItems(){ return PI_DEFAULT_ITEMS; }
+
+// OPJ_CHECKS 동적 업데이트
+function syncOPJ_CHECKS(){
+  window.OPJ_CHECKS_DYNAMIC = getAllPiItems().map(function(x){return x.id;});
+}
+
+// PI 코딩 박스 렌더링
+function renderPiCodingBox(){
+  var box = document.getElementById('pi-coding-box');
+  if(!box) return;
+  var items = getAllPiItems();
+  // 그룹별로 묶기
+  var groups = {};
+  items.forEach(function(item){
+    if(!groups[item.group]) groups[item.group]=[];
+    groups[item.group].push(item);
+  });
+  // 현재 체크 상태 저장
+  var checked = {};
+  items.forEach(function(item){
+    var el = document.getElementById(item.id);
+    if(el) checked[item.id] = el.checked;
+  });
+  var html = '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">PI 코딩 — AI 자동 또는 수동 체크 (항목 자동 누적)</div>';
+  Object.keys(groups).forEach(function(g){
+    html += '<div style="margin-bottom:10px;">';
+    html += '<div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;">'+g+'</div>';
+    html += '<div class="chk-group">';
+    groups[g].forEach(function(item){
+      html += '<label class="opj-chk"><input type="checkbox" id="'+item.id+'" onchange="mOpj(this)"> '+item.label+'</label>';
+    });
+    html += '</div></div>';
+  });
+
+  box.innerHTML = html;
+  // 체크 상태 복원
+  items.forEach(function(item){
+    var el = document.getElementById(item.id);
+    if(el && checked[item.id]) el.checked = true;
+  });
+  syncOPJ_CHECKS();
+}
+
+
+
+function calcPackYear(){
+  var yr=parseFloat(document.getElementById('opj_smoking_yr')?.value)||0;
+  var ppd=parseFloat(document.getElementById('opj_smoking_ppd')?.value)||0;
+  var py=document.getElementById('opj_smoking_py');
+  if(py&&yr>0&&ppd>0){py.value=(yr*ppd).toFixed(1);}
+  updateCompletion();
+}
+function addPmhxRow(){
+  var c=document.getElementById('opj-pmhx-rows');
+  if(!c)return;
+  var n=c.children.length;
+  var row=document.createElement('div');
+  row.className='pmhx-row';
+  row.innerHTML=''
+    +'<select class="pmhx-cat" id="opj_pmhx_'+n+'_cat" onchange="mOpj(this)">'
+    +'<option value="">질환 선택</option>'
+    +'<option value="1">1. HTN (고혈압)</option>'
+    +'<option value="2">2. HL (이상지질혈증)</option>'
+    +'<option value="3">3. UI (요실금)</option>'
+    +'<option value="4">4. 폐경</option>'
+    +'<option value="5">5. 악성종양</option>'
+    +'<option value="6">6. 혈액질환</option>'
+    +'<option value="7">7. 심혈관질환</option>'
+    +'<option value="8">8. 뇌혈관질환</option>'
+    +'<option value="9">9. 치매</option>'
+    +'<option value="10">10. 파킨슨</option>'
+    +'<option value="11">11. 갑상선질환</option>'
+    +'<option value="12">12. 호흡기질환</option>'
+    +'<option value="13">13. 신장/비뇨기질환</option>'
+    +'<option value="14">14. 이비인후과</option>'
+    +'<option value="15">15. 근골격질환</option>'
+    +'<option value="99">99. 기타</option>'
+    +'</select>'
+    +'<input type="text" class="pmhx-name" id="opj_pmhx_'+n+'_name" placeholder="상세 질환명" oninput="mOpj(this)">'
+    +'<input type="number" class="pmhx-yr" id="opj_pmhx_'+n+'_yr" placeholder="몇" min="0" oninput="mOpj(this)">'
+    +'<span style="font-size:11px;color:var(--text3);">년 전</span>'
+    +'<button class="pmhx-del" onclick="removeRow(this)">×</button>';
+  c.appendChild(row);
+}
+function addRow(containerId, type){
+  var c=document.getElementById(containerId);
+  if(!c)return;
+  var n=c.children.length;
+  var row=document.createElement('div');
+  row.className='pmhx-row';
+  row.setAttribute('data-type',type);
+  if(type==='pmhx'){
+    row.innerHTML='<select class="pmhx-cat" id="opj_pmhx_'+n+'_cat" onchange="mOpj(this)"><option value="">계통 선택</option><option value="심혈관">심혈관</option><option value="내분비">내분비/대사</option><option value="악성종양">악성종양</option><option value="혈액">혈액질환</option><option value="신경">신경/정신</option><option value="이비인후">이비인후과</option><option value="호흡기">호흡기</option><option value="신장">신장/비뇨기</option><option value="근골격">근골격</option><option value="기타">기타</option></select><input type="text" class="pmhx-name" id="opj_pmhx_'+n+'_name" placeholder="질환명" oninput="mOpj(this)"><input type="number" class="pmhx-yr" id="opj_pmhx_'+n+'_yr" placeholder="몇 년 전" min="0" oninput="mOpj(this)"><span style="font-size:11px;color:var(--text3);">년 전</span><button class="pmhx-del" onclick="removeRow(this)">×</button>';
+  } else if(type==='ar'){
+    row.innerHTML='<select class="pmhx-sel" id="opj_ar_'+n+'_yn" onchange="mOpj(this)"><option value="">선택</option><option>-</option><option>+</option></select><input type="text" class="pmhx-name" id="opj_ar_'+n+'_type" placeholder="수술 종류" oninput="mOpj(this)"><input type="number" class="pmhx-yr" id="opj_ar_'+n+'_yr" placeholder="몇 년 전" min="0" oninput="mOpj(this)"><span style="font-size:11px;color:var(--text3);">년 전</span><button class="pmhx-del" onclick="removeRow(this)">×</button>';
+  } else if(type==='hyst'){
+    row.innerHTML='<select class="pmhx-sel" id="opj_hyst_'+n+'_yn" onchange="mOpj(this)"><option value="">선택</option><option>-</option><option>+</option></select><input type="text" class="pmhx-name" id="opj_hyst_'+n+'_type" placeholder="수술 종류" oninput="mOpj(this)"><input type="number" class="pmhx-yr" id="opj_hyst_'+n+'_yr" placeholder="몇 년 전" min="0" oninput="mOpj(this)"><span style="font-size:11px;color:var(--text3);">년 전</span><button class="pmhx-del" onclick="removeRow(this)">×</button>';
+  }
+  c.appendChild(row);
+}
+function removeRow(btn){var row=btn.closest('.pmhx-row');if(row)row.remove();}
+function getRowData(containerId){
+  var c=document.getElementById(containerId);if(!c)return[];
+  var rows=[];
+  Array.from(c.children).forEach((row,i)=>{
+    var type=row.getAttribute('data-type');
+    var obj={idx:i};
+    row.querySelectorAll('[id]').forEach(el=>{obj[el.id]=el.type==='checkbox'?el.checked:el.value;});
+    rows.push(obj);
+  });
+  return rows;
+}
+function calcASMM(){var aL=parseFloat(document.getElementById('arms_lean_g').value)||0,lL=parseFloat(document.getElementById('legs_lean_g').value)||0,h=parseFloat(document.getElementById('height').value)||0,sx=document.getElementById('sex').value,ae=document.getElementById('asmm'),ai=document.getElementById('asmi'),sd=document.getElementById('sarco_dx');if(aL>0&&lL>0){var asmm=(aL+lL)/1000;ae.value=asmm.toFixed(2);ae.closest('.field').classList.add('filled');if(h>0){var hm=h/100,asmi=asmm/(hm*hm);ai.value=asmi.toFixed(2);ai.closest('.field').classList.add('filled');if(sd){sd.value=asmi<(sx==='Male'?7.0:5.4)?'근감소증':'없음';sd.closest('.field').classList.add('filled');}}}else{ae.value='';ai.value='';ae.closest('.field').classList.remove('filled');ai.closest('.field').classList.remove('filled');}}
+function updateCompletion(){
+  var n1=OPJ_FIELDS.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
+  var nm=MANO_FIELDS.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
+  var pct;
+  if(currentDexaDone===true){
+    // DEXA 시행: 초진+마노메트리+DEXA 전체
+    var n2=ALL_FIELDS.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
+    pct=Math.round((n1+n2)/(OPJ_FIELDS.length+ALL_FIELDS.length)*100);
+  }else{
+    // DEXA 미시행/미선택: 초진+마노메트리 기준
+    pct=Math.round((n1+nm)/(OPJ_FIELDS.length+MANO_FIELDS.length)*100);
+  }
+  pct=Math.min(pct,100);
+  document.getElementById('completion-pct').textContent=pct+'%';
+  document.getElementById('completion-fill').style.width=pct+'%';
+}
+function setDexaDone(val){
+  currentDexaDone=val;
+  document.getElementById('dexa-yes-btn').style.cssText='padding:6px 18px;font-size:12px;border:none;'+(val?'background:var(--green);color:#fff;':'background:transparent;border:0.5px solid var(--border2);color:var(--text);');
+  document.getElementById('dexa-no-btn').style.cssText='padding:6px 18px;font-size:12px;border:none;'+(!val?'background:#e24b4a;color:#fff;':'background:transparent;border:0.5px solid var(--border2);color:var(--text);');
+  document.getElementById('dexa-toggle-label').textContent=val?'✓ DEXA 검사 시행':'✗ DEXA 미시행';
+  document.getElementById('dexa-toggle-label').style.color=val?'var(--green)':'var(--text3)';
+  // DEXA 탭/결과 탭 활성/비활성
+  ['tab-btn-2','tab-btn-3','tab-btn-4'].forEach(id=>{
+    var b=document.getElementById(id);if(!b)return;
+    b.style.opacity=val?'1':'0.35';b.style.pointerEvents=val?'auto':'none';
+    b.title=val?'':' DEXA 미시행 — 비활성화';
+  });
+  if(!val&&[2,3,4].includes(currentActiveTab)){switchTab(0);}
+}
+var currentActiveTab=0;
+function switchTab(i){
+  if(!currentDexaDone&&[2,3,4].includes(i)){showToast('DEXA 시행 여부를 먼저 선택해주세요.');return;}
+  currentActiveTab=i;
+  for(var j=0;j<6;j++){document.getElementById('tab-'+j).style.display=j===i?'block':'none';document.querySelectorAll('.tab-btn')[j].classList.toggle('active',j===i);}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function switchMain(view){
+  document.getElementById('main-form').style.display=view==='form'?'block':'none';
+  document.getElementById('main-list').style.display=view==='list'?'block':'none';
+  if(view==='list'){
+    if(typeof window.loadFromFirebase==='function'){
+      window.loadFromFirebase();
+    }else{
+      window.addEventListener('firebaseReady',function(){window.loadFromFirebase();},{once:true});
+      renderList();
+    }
+  }
+}
+function newRecord(){
+  clearForm();
+  var doGenerate=function(){
+    currentStudyId=generateId();
+    document.getElementById('study_id').value=currentStudyId;
+    switchMain('form');
+  };
+  if(typeof window.loadFromFirebase==='function'){
+    window.loadFromFirebase().then(doGenerate);
+  }else{
+    doGenerate();
+  }
+}
+function clearForm(){ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled');}});OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled-opj');}});[...CHECKBOX_FIELDS,...(window.OPJ_CHECKS_DYNAMIC||[])].forEach(id=>{var e=document.getElementById(id);if(e)e.checked=false;});document.getElementById('reg_no').value='';document.getElementById('json-paste').value='';document.getElementById('opj-parsed-card').style.display='none';var oc=document.getElementById('opj-check-content');if(oc)oc.textContent='— 내용을 입력하면 여기에 원문 형식으로 표시됩니다 —';currentDexaDone=null;setDexaDone(null);updateCompletion();}
+function getFormData(){
+  var d={study_id:currentStudyId,reg_no:document.getElementById('reg_no').value,meas_date:document.getElementById('meas_date').value,dexa_done:currentDexaDone===true?1:currentDexaDone===false?0:''};
+  ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e)d[id]=e.value;});
+  OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e)d[id]=e.value;});
+  // 체크박스 저장
+  [...CHECKBOX_FIELDS,...OPJ_CHECKS].forEach(id=>{var e=document.getElementById(id);if(e)d[id]=e.checked?1:0;});
+  // PI extra JSON 저장
+  var piEx=document.getElementById('pi_extra_json');if(piEx)d.pi_extra_json=piEx.value;
+  // 기타 과거력 동적 행 저장
+  var pmhxC=document.getElementById('opj-pmhx-rows');
+  if(pmhxC){
+    var pmhxData=[];
+    Array.from(pmhxC.children).forEach(function(row,i){
+      var cat=document.getElementById('opj_pmhx_'+i+'_cat');
+      var nm=document.getElementById('opj_pmhx_'+i+'_name');
+      var yr=document.getElementById('opj_pmhx_'+i+'_yr');
+      if(nm&&nm.value.trim())pmhxData.push({cat:cat?cat.value:'99',name:nm.value,yr:yr?yr.value:''});
+    });
+    d.opj_pmhx_list=JSON.stringify(pmhxData);
+  }
+  return d;
+}
+
+function loadRecord(idx){
+  var r=records[idx];
+  if(!r)return;
+  currentStudyId=r.study_id;
+  currentDexaDone=r.dexa_done===1?true:r.dexa_done===0?false:null;
+  document.getElementById('study_id').value=r.study_id;
+  document.getElementById('reg_no').value=r.reg_no||'';
+  document.getElementById('meas_date').value=r.meas_date||'';
+  // DEXA 토글
+  setDexaDone(currentDexaDone);
+  // 폼 필드 복원
+  ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e&&r[id]!==undefined){e.value=r[id];var p=e.closest('.field');if(p)p.classList.toggle('filled',r[id]!=='');}});
+  OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e&&r[id]!==undefined){e.value=String(r[id]);var p=e.closest('.field');if(p){p.classList.remove('filled');p.classList.toggle('filled-opj',r[id]!=='');}}});
+  // 체크박스 복원
+  [...CHECKBOX_FIELDS,...OPJ_CHECKS].forEach(id=>{var e=document.getElementById(id);if(e)e.checked=r[id]===1||r[id]===true;});
+  // 기타 과거력 동적 행 복원
+  var pmhxC=document.getElementById('opj-pmhx-rows');
+  if(pmhxC){
+    pmhxC.innerHTML='';
+    var pmhxData=[];
+    try{if(r.opj_pmhx_list)pmhxData=JSON.parse(r.opj_pmhx_list);}catch(e){}
+    pmhxData.forEach(function(item,i){
+      addPmhxRow();
+      var cat=document.getElementById('opj_pmhx_'+i+'_cat');
+      var nm=document.getElementById('opj_pmhx_'+i+'_name');
+      var yr=document.getElementById('opj_pmhx_'+i+'_yr');
+      if(cat)cat.value=item.cat||'99';
+      if(nm)nm.value=item.name||'';
+      if(yr)yr.value=item.yr||'';
+    });
+  }
+  updateCompletion();calcASMM();
+  switchMain('form');
+  switchTab(0);
+  showToast('📋 '+r.study_id+' 불러옴');
+}
+function updateStatus(msg){var e=document.getElementById('db-status');if(e)e.textContent=msg;}
+async function saveRecord(){
+  var d=getFormData();
+  if(!d.study_id){showToast('오류: study_id 없음');return;}
+  // 등록번호 중복 확인
+  if(d.reg_no&&d.reg_no.trim()){
+    var allRecs=window._records||records||[];
+    var dup=allRecs.filter(function(r){
+      return r.reg_no&&r.reg_no.trim()===d.reg_no.trim()&&r.study_id!==d.study_id;
+    });
+    if(dup.length){
+      var dupInfo=dup.map(function(r){return r.study_id+' ('+( r.opj_date||'-')+')';}).join(', ');
+      if(!confirm('⚠️ 같은 이니셜이 이미 있습니다!\n\n기존 대상자: '+dupInfo+'\n\n그래도 저장하시겠습니까?'))return;
+    }
+  }
+  // records 항상 최신 동기화
+  if(window._records)records=window._records;
+  var n1=OPJ_FIELDS.filter(id=>d[id]&&d[id]!=='').length;
+  var nm=MANO_FIELDS.filter(id=>d[id]&&d[id]!=='').length;
+  if(currentDexaDone===true){
+    var n2=ALL_FIELDS.filter(id=>d[id]&&d[id]!=='').length;
+    d._completion=Math.min(Math.round((n1+n2)/(OPJ_FIELDS.length+ALL_FIELDS.length)*100),100);
+  }else{
+    d._completion=Math.min(Math.round((n1+nm)/(OPJ_FIELDS.length+MANO_FIELDS.length)*100),100);
+  }
+  var ex=records.find(r=>r.study_id===d.study_id);
+  if(ex&&ex._fireId)d._fireId=ex._fireId;
+  showToast('저장 중...');
+  var ok=await window.saveToFirebase(d);
+  if(ok){
+    // records 배열 업데이트
+    var idx=records.findIndex(r=>r.study_id===d.study_id);
+    if(idx>=0)records[idx]=d;
+    else records.push(d);
+    // window._records 동기화
+    if(window._records){
+      var widx=window._records.findIndex(r=>r.study_id===d.study_id);
+      if(widx>=0)window._records[widx]=d;
+      else window._records.push(d);
+    } else {
+      window._records=records.slice();
+    }
+    showToast('✅ 저장 완료 — '+d.study_id);
+    if(typeof updateStatus==='function')updateStatus('✅ DB 연결됨 — '+records.length+'명');
+    renderList();
+    switchMain('list');
+    // 목록 맨 위로 스크롤
+    setTimeout(function(){
+      var listEl=document.getElementById('main-list');
+      if(listEl)listEl.scrollTop=0;
+      window.scrollTo({top:0,behavior:'smooth'});
+    },100);
+  } else {
+    showToast('❌ 저장 오류 — Firebase 연결을 확인하세요.');
+  }
+}
+function setListFilter(f){currentListFilter=f;["all","dexa","nodexa"].forEach(k=>{var b=document.getElementById("filter-"+k+"-btn");if(b){b.style.cssText=k===f?"padding:5px 12px;font-size:12px;background:var(--text);color:var(--bg);border:none;":"padding:5px 12px;font-size:12px;background:transparent;border:0.5px solid var(--border2);color:var(--text);";}}); renderList();}
+function renderList(){
+  if(window._records)records=window._records;
+  var tbody=document.getElementById("record-tbody"),empty=document.getElementById("empty-msg");
+  var searchQ=(document.getElementById('list-search')||{value:''}).value.toLowerCase().trim();
+  var filtered=records.filter(r=>{
+    if(currentListFilter==="dexa")if(r.dexa_done!==1)return false;
+    if(currentListFilter==="nodexa")if(!(r.dexa_done===0||r.dexa_done===""||r.dexa_done===undefined))return false;
+    if(!searchQ)return true;
+    return (r.study_id||'').toLowerCase().includes(searchQ)
+      ||(r.opj_cc||'').toLowerCase().includes(searchQ)
+      ||(r.opj_date||'').includes(searchQ)
+      ||(r.opj_assessment||'').toLowerCase().includes(searchQ)
+      ||String(r.age||'').includes(searchQ)
+      ||String(r.opj_fisi||'').includes(searchQ)
+      ||String(r.opj_wexner||'').includes(searchQ)
+      ||(r.dob||'').includes(searchQ);
+  });
+  // 역순 정렬 - 최근 입력(meas_date, study_id 기준) 먼저
+  filtered=filtered.slice().sort(function(a,b){
+    var da=a.meas_date||a.opj_date||'';
+    var db=b.meas_date||b.opj_date||'';
+    if(db>da)return 1; if(da>db)return -1;
+    return (b.study_id||'')>(a.study_id||'')?1:-1;
+  });
+  if(!filtered.length){tbody.innerHTML="";empty.style.display="block";empty.textContent=currentListFilter==="dexa"?"DEXA 시행 환자가 없습니다":currentListFilter==="nodexa"?"DEXA 미시행 환자가 없습니다":"저장된 기록이 없습니다";return;}
+  empty.style.display="none";
+  tbody.innerHTML=filtered.map(r=>{
+    var realIdx=records.indexOf(r);
+    var cc=r.opj_cc?(r.opj_cc.length>20?r.opj_cc.slice(0,20)+"…":r.opj_cc):"-";
+    var dexaBadge=r.dexa_done===1?"<span class='tag ok'>시행</span>":r.dexa_done===0?"<span class='tag' style='background:var(--bg2);color:var(--text3);border:0.5px solid var(--border)'>미시행</span>":"<span style='font-size:11px;color:var(--text3)'>-</span>";
+    var sel=selectedIds.has(r.study_id);
+    var chk=sel?"checked":"";
+    var bg=sel?"background:var(--blue-bg);":"";
+    var savedDate=r.meas_date||'-';
+    return "<tr style='"+bg+"'><td style='padding:4px 8px;'><input type='checkbox' "+chk+" onchange='toggleRowSelect(this,\""+r.study_id+"\")' style='cursor:pointer;'></td>"
+      +"<td style='font-size:11px;color:var(--text3);'>"+savedDate+"</td>"
+      +"<td style='font-family:monospace;font-size:11px'>"+r.study_id+"</td>"
+      +"<td>"+(r.opj_date||"-")+"</td>"
+      +"<td style='max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>"+cc+"</td>"
+      +"<td>"+(r.opj_fisi||"-")+"</td>"
+      +"<td>"+(r.opj_wexner||"-")+"</td>"
+      +"<td>"+dexaBadge+"</td>"
+      +"<td>"+(r.dexa_done===1?(r.dexa_date||"-"):"-")+"</td>"
+      +"<td>"+(r.age||"-")+"세 / "+(r.sex==="Female"||r.sex==="0"||r.sex===0?"F":r.sex==="Male"||r.sex==="1"||r.sex===1?"M":r.sex||"-")+"</td>"
+      +"<td><span class='tag "+((r._completion||0)>=50?"ok":"partial")+"'>"+(r._completion||0)+"%</span></td>"
+      +"<td><button onclick='loadRecord("+realIdx+")' style='font-size:11px;padding:3px 8px;cursor:pointer;border:0.5px solid var(--border2);border-radius:4px;background:transparent;color:var(--text)'>편집</button></td></tr>";
+  }).join("");
+  updateSelectionBar();
+}
+function toggleRowSelect(chk,sid){
+  if(chk.checked)selectedIds.add(sid);else selectedIds.delete(sid);
+  var row=chk.closest("tr");if(row)row.style.background=chk.checked?"var(--blue-bg)":"";
+  updateSelectionBar();
+}
+function toggleSelectAll(chk){
+  if(window._records)records=window._records;
+  var filtered=records.filter(r=>{if(currentListFilter==="dexa")return r.dexa_done===1;if(currentListFilter==="nodexa")return r.dexa_done===0||r.dexa_done===""||r.dexa_done===undefined;return true;});
+  filtered.forEach(r=>{if(chk.checked)selectedIds.add(r.study_id);else selectedIds.delete(r.study_id);});
+  renderList();
+}
+function clearSelection(){selectedIds.clear();var sac=document.getElementById("select-all-chk");if(sac)sac.checked=false;renderList();}
+function updateSelectionBar(){
+  var bar=document.getElementById("selection-bar"),cnt=document.getElementById("selection-count");
+  if(!bar||!cnt)return;
+  if(selectedIds.size>0){bar.style.display="flex";cnt.textContent=selectedIds.size+"명 선택됨";}
+  else{bar.style.display="none";}
+}
+async function clearAllRecords(){if(!confirm('저장된 모든 기록을 삭제하시겠습니까?'))return;for(var r of records)if(r._fireId)await window.deleteFromFirebase(r._fireId);records=[];if(window._records)window._records=[];renderList();showToast('전체 삭제 완료');}
+async function deleteSelectedRecords(){
+  if(!selectedIds.size){showToast('삭제할 환자를 선택해주세요.');return;}
+  var names=Array.from(selectedIds).join(', ');
+  if(!confirm(names+'\n\n위 '+selectedIds.size+'명을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'))return;
+  var toDelete=records.filter(r=>selectedIds.has(r.study_id));
+  for(var r of toDelete){
+    if(r._fireId)await window.deleteFromFirebase(r._fireId);
+  }
+  records=records.filter(r=>!selectedIds.has(r.study_id));
+  if(window._records)window._records=window._records.filter(r=>!selectedIds.has(r.study_id));
+  selectedIds.clear();
+  renderList();
+  showToast('✅ '+toDelete.length+'명 삭제 완료');
+}
+async function exportExcel(mode){
+  mode=mode||"all";
+  // Firebase에서 최신 데이터 먼저 로드
+  showToast('📊 데이터 불러오는 중...');
+  if(window.loadFromFirebase){
+    await window.loadFromFirebase();
+  }
+  if(window._records)records=window._records;
+  var src=mode==="selected"?records.filter(r=>selectedIds.has(r.study_id)):mode==="dexa"?records.filter(r=>r.dexa_done===1):records;
+  if(!src.length){showToast(mode==="dexa"?"DEXA 시행 환자가 없습니다.":"저장된 기록이 없습니다. Firebase 연결을 확인하세요.");return;}
+  var wb=XLSX.utils.book_new();
+
+  function code(val,map){if(val===undefined||val===null||val==="")return "";return map[val]!==undefined?map[val]:val;}
+  var pm={"+":1,"-":0};
+  var toneM={"decreased":1,"slightly decreased":2,"mild decreased":2,"WNL":3,"normal":3,"increased":4};
+  var musM={"good":2,"fair":1,"none":0,"WNL":3};
+  var looseM={"+":1,"-":0};
+
+  // ===== 시트1: 초진_분석용 =====
+  var wsOpj=XLSX.utils.json_to_sheet(src.map(r=>{
+    var spMap={'0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6};
+    var smokMap={'0':0,'1':1,'2':2};
+    var cvsMap={'0':0,'1':1,'2':2,'3':3,'4':4};
+    var chk=function(k){return r[k]===1||r[k]===true?1:0;};
+    var c01=function(k){return (r[k]===''||r[k]===undefined)?'':parseInt(r[k])||0;};
+    var num=function(k){return (r[k]===''||r[k]===undefined)?'':r[k];};
+    var txt=function(k){return r[k]||'';};
+    return {
+      // ══ 기본 ══
+      study_id:txt('study_id'), dexa_done:r.dexa_done===1?1:r.dexa_done===0?0:'',
+      reg_no:txt('reg_no'), meas_date:txt('meas_date'),
+      // ══ 인구통계 ══
+      opj_date:txt('opj_date'), dob:txt('dob'), age:num('age'),
+      sex_code:r.sex==='Female'||r.sex==='0'?0:r.sex==='Male'||r.sex==='1'?1:'',
+      height:num('height'), weight:num('weight'), bmi:num('bmi'),
+      // ══ 초진 CC/PI ══
+      opj_cc:txt('opj_cc'),
+      opj_pain_code:r.opj_pain==='1'||r.opj_pain==='유'?1:r.opj_pain==='0'||r.opj_pain==='무'?0:'',
+      // ── PI 발생 상황 ──
+      pi_sit_code:(function(){var t=[];['pi_sit_passive','pi_sit_postdefec','pi_sit_strain','pi_sit_nocturnal','pi_sit_urge'].forEach(function(k,i){if(chk(k))t.push(i+1);});return t.join(';');}()),
+      pi_sit_passive:chk('pi_sit_passive'), pi_sit_postdefec:chk('pi_sit_postdefec'),
+      pi_sit_strain:chk('pi_sit_strain'), pi_sit_nocturnal:chk('pi_sit_nocturnal'), pi_sit_urge:chk('pi_sit_urge'),
+      // ── PI 양상 ──
+      pi_sx_gas:chk('pi_sx_gas'), pi_sx_mucus:chk('pi_sx_mucus'),
+      pi_sx_liquid:chk('pi_sx_liquid'), pi_sx_solid:chk('pi_sx_solid'),
+      // ── PI 누출/Pad ──
+      pi_lk_leak:chk('pi_lk_leak'), pi_lk_soiling:chk('pi_lk_soiling'), pi_pad:chk('pi_pad'),
+      // ── PI 악화인자 ──
+      pi_ag_dairy:chk('pi_ag_dairy'), pi_ag_fruit:chk('pi_ag_fruit'),
+      pi_ag_food:chk('pi_ag_food'), pi_ag_other:chk('pi_ag_other'),
+      pi_ag_diarrhea:chk('pi_ag_diarrhea'), pi_ag_loose:chk('pi_ag_loose'),
+      pi_ag_cough:chk('pi_ag_cough'), pi_ag_stress:chk('pi_ag_stress'),
+      pi_ag_postdefec:chk('pi_ag_postdefec'), pi_ag_exercise:chk('pi_ag_exercise'),
+      // ── PI 경과 ──
+      pi_crs_worsening:chk('pi_crs_worsening'), pi_crs_intermittent:chk('pi_crs_intermittent'),
+      pi_crs_recent_worse:chk('pi_crs_recent_worse'),
+      // ── PI 이전치료 ──
+      pi_tx_code:(function(){var t=[];if(chk('pi_tx_none'))t.push(0);if(chk('pi_tx_drug'))t.push(1);if(chk('pi_tx_bio'))t.push(2);if(chk('pi_tx_pfe'))t.push(3);if(chk('pi_tx_op'))t.push(4);if(chk('pi_tx_electric'))t.push(5);return t.join(';');}()),
+      pi_tx_none:chk('pi_tx_none'), pi_tx_drug:chk('pi_tx_drug'), pi_tx_bio:chk('pi_tx_bio'),
+      pi_tx_pfe:chk('pi_tx_pfe'), pi_tx_op:chk('pi_tx_op'), pi_tx_electric:chk('pi_tx_electric'),
+      pi_tx_other:txt('pi_tx_other'), pi_extra_json:txt('pi_extra_json'),
+      // ── FISI ──
+      opj_fisi:num('opj_fisi'), opj_fi_gas:num('opj_fi_gas'), opj_fi_mucus:num('opj_fi_mucus'),
+      opj_fi_liquid:num('opj_fi_liquid'), opj_fi_solid:num('opj_fi_solid'),
+      // ── Wexner ──
+      opj_wexner:num('opj_wexner'), opj_wx_solid:num('opj_wx_solid'), opj_wx_liquid:num('opj_wx_liquid'),
+      opj_wx_gas:num('opj_wx_gas'), opj_wx_pad:num('opj_wx_pad'), opj_wx_life:num('opj_wx_life'),
+      // ── CVS/증상 ──
+      opj_cvs_yn_code:c01('opj_cvs_yn'),
+      opj_cvs_result_code:cvsMap[r.opj_cvs_result]!==undefined?cvsMap[r.opj_cvs_result]:'',
+      opj_cvs_detail:txt('opj_cvs_detail'), opj_cvs_yr:num('opj_cvs_yr'),
+      opj_onset_yr:num('opj_onset_yr'), opj_episode:txt('opj_episode'),
+      opj_constipation_code:c01('opj_constipation'), opj_diarrhea_code:c01('opj_diarrhea'),
+      opj_loose_code:c01('opj_loose'), opj_defecation:txt('opj_defecation'),
+      // ── 과거력 ──
+      opj_spinal_code:spMap[String(r.opj_spinal)]!==undefined?spMap[String(r.opj_spinal)]:'',
+      opj_spinal_detail:txt('opj_spinal_detail'), opj_spinal_yr:num('opj_spinal_yr'),
+      opj_dementia_code:c01('opj_dementia'), opj_bmi_raw:txt('opj_bmi_raw'),
+      opj_smoking_code:smokMap[String(r.opj_smoking)]!==undefined?smokMap[String(r.opj_smoking)]:'',
+      opj_smoking_yr:num('opj_smoking_yr'), opj_smoking_ppd:num('opj_smoking_ppd'), opj_smoking_py:num('opj_smoking_py'),
+      opj_probiotics_code:c01('opj_probiotics'),
+      opj_prev_ar_yn_code:c01('opj_prev_ar_yn'), opj_prev_ar_type_code:txt('opj_prev_ar_type'),
+      opj_prev_ar_detail:txt('opj_prev_ar_detail'), opj_prev_ar_yr:num('opj_prev_ar_yr'),
+      opj_hyst_code:c01('opj_hyst'), opj_hyst_type:txt('opj_hyst_type'), opj_hyst_yr:num('opj_hyst_yr'),
+      opj_para_na:txt('opj_para_na'), opj_para_total:num('opj_para_total'),
+      opj_para_vd:num('opj_para_vd'), opj_para_cs:num('opj_para_cs'),
+      opj_para_forceps_code:c01('opj_para_forceps'), opj_para_max_wt:num('opj_para_max_wt'),
+      opj_dm_code:c01('opj_dm'), opj_dm_memo:txt('opj_dm_memo'),
+      opj_htn_code:c01('opj_htn'), opj_htn_yr:num('opj_htn_yr'), opj_hl_code:c01('opj_hl'), opj_hl_yr:num('opj_hl_yr'),
+      opj_ui_code:c01('opj_ui'), opj_ui_yr:num('opj_ui_yr'), opj_menopause_code:c01('opj_menopause'), opj_menopause_yr:num('opj_menopause_yr'),
+      opj_cancer_code:c01('opj_cancer'), opj_cancer_yr:num('opj_cancer_yr'), opj_cancer_memo:txt('opj_cancer_memo'),
+      opj_hematologic_code:c01('opj_hematologic'), opj_hematologic_yr:num('opj_hematologic_yr'), opj_cardiac_code:c01('opj_cardiac'), opj_cardiac_yr:num('opj_cardiac_yr'),
+      opj_pmhx_other:(function(){var list=[];try{if(r.opj_pmhx_list){var arr=JSON.parse(r.opj_pmhx_list);arr.forEach(function(x){if(x.name)list.push((x.cat?'['+x.cat+']':'')+x.name+(x.yr?' ('+x.yr+'년전)':''));});}}catch(e){}return list.join('; ');}()),
+      // ── PE/DRE ──
+      opj_skin_irr_code:c01('opj_skin_irr'), opj_patulus_code:c01('opj_patulus'),
+      opj_perineal_code:c01('opj_perineal'), opj_stool_stain_code:c01('opj_stool_stain'),
+      opj_feces_code:c01('opj_feces'),
+      opj_resting_tone_code:(r.opj_resting_tone===''||r.opj_resting_tone===undefined)?'':parseInt(r.opj_resting_tone)||0,
+      opj_squeeze_code:(r.opj_squeeze===''||r.opj_squeeze===undefined)?'':parseInt(r.opj_squeeze)||0,
+      opj_muschel_code:(r.opj_muschel===''||r.opj_muschel===undefined)?'':parseInt(r.opj_muschel)||0,
+      // ── A/P ──
+      opj_assessment:txt('opj_assessment'), opj_plan:txt('opj_plan'),
+      opj_memo:txt('opj_memo'), opj_pi_text:txt('opj_pi_text'), opj_raw_text:txt('opj_raw_text'),
+      // ══ DEXA 체성분 (Total) ══
+      dexa_date:txt('dexa_date'),
+      total_fat_pct:num('total_fat_pct'), total_centile:num('total_centile'),
+      total_mass_kg:num('total_mass_kg'), total_fat_g:num('total_fat_g'),
+      total_lean_g:num('total_lean_g'), total_bmc_g:num('total_bmc_g'), total_fatfree_g:num('total_fatfree_g'),
+      // ── Arms ──
+      arms_fat_pct:num('arms_fat_pct'), arms_mass_kg:num('arms_mass_kg'), arms_fat_g:num('arms_fat_g'),
+      arms_lean_g:num('arms_lean_g'), arms_bmc_g:num('arms_bmc_g'),
+      arm_r_fat_pct:num('arm_r_fat_pct'), arm_r_mass_kg:num('arm_r_mass_kg'), arm_r_fat_g:num('arm_r_fat_g'),
+      arm_r_lean_g:num('arm_r_lean_g'), arm_r_bmc_g:num('arm_r_bmc_g'),
+      arm_l_fat_pct:num('arm_l_fat_pct'), arm_l_mass_kg:num('arm_l_mass_kg'), arm_l_fat_g:num('arm_l_fat_g'),
+      arm_l_lean_g:num('arm_l_lean_g'), arm_l_bmc_g:num('arm_l_bmc_g'),
+      // ── Legs ──
+      legs_fat_pct:num('legs_fat_pct'), legs_mass_kg:num('legs_mass_kg'), legs_fat_g:num('legs_fat_g'),
+      legs_lean_g:num('legs_lean_g'), legs_bmc_g:num('legs_bmc_g'),
+      leg_r_fat_pct:num('leg_r_fat_pct'), leg_r_mass_kg:num('leg_r_mass_kg'), leg_r_fat_g:num('leg_r_fat_g'),
+      leg_r_lean_g:num('leg_r_lean_g'), leg_r_bmc_g:num('leg_r_bmc_g'),
+      leg_l_fat_pct:num('leg_l_fat_pct'), leg_l_mass_kg:num('leg_l_mass_kg'), leg_l_fat_g:num('leg_l_fat_g'),
+      leg_l_lean_g:num('leg_l_lean_g'), leg_l_bmc_g:num('leg_l_bmc_g'),
+      // ── Trunk ──
+      trunk_fat_pct:num('trunk_fat_pct'), trunk_mass_kg:num('trunk_mass_kg'), trunk_fat_g:num('trunk_fat_g'),
+      trunk_lean_g:num('trunk_lean_g'), trunk_bmc_g:num('trunk_bmc_g'),
+      // ── Android/Gynoid ──
+      android_fat_pct:num('android_fat_pct'), android_mass_kg:num('android_mass_kg'), android_fat_g:num('android_fat_g'),
+      android_lean_g:num('android_lean_g'), android_bmc_g:num('android_bmc_g'),
+      gynoid_fat_pct:num('gynoid_fat_pct'), gynoid_mass_kg:num('gynoid_mass_kg'), gynoid_fat_g:num('gynoid_fat_g'),
+      gynoid_lean_g:num('gynoid_lean_g'), gynoid_bmc_g:num('gynoid_bmc_g'),
+      ag_ratio:num('ag_ratio'), android_fat_korea:num('android_fat_korea'), gynoid_fat_korea:num('gynoid_fat_korea'),
+      // ── Korean 기준 ──
+      korea_tissue_g:num('korea_tissue_g'), korea_fat_g:num('korea_fat_g'),
+      korea_lean_g:num('korea_lean_g'), korea_bmc_g:num('korea_bmc_g'), korea_fatfree_g:num('korea_fatfree_g'),
+      // ── 근감소증 ──
+      asmm:num('asmm'), asmi:num('asmi'), who_class:num('who_class'), sarco_dx:num('sarco_dx'), bmi_dxa:num('bmi_dxa'),
+      // ══ DEXA 골밀도 ══
+      bmd_head:num('bmd_head'), bmd_arms:num('bmd_arms'), bmd_legs:num('bmd_legs'),
+      bmd_trunk:num('bmd_trunk'), bmd_ribs:num('bmd_ribs'), bmd_spine:num('bmd_spine'),
+      bmd_pelvis:num('bmd_pelvis'), bmd_total:num('bmd_total'),
+      ya_pct:num('ya_pct'), ya_tscore:num('ya_tscore'),
+      am_pct:num('am_pct'), am_zscore:num('am_zscore'), osteo_dx:num('osteo_dx'),
+      // ══ 마노메트리 ══
+      mano_date:txt('mano_date'), mano_timing:num('mano_timing'), mano_seq:num('mano_seq'),
+      sphincter_tone:num('sphincter_tone'),
+      rest_mean:num('rest_mean'), rest_vec:num('rest_vec'),
+      sq_max:num('sq_max'), sq_vec:num('sq_vec'),
+      sus_dur:num('sus_dur'), sph_len:num('sph_len'), hpz:num('hpz'),
+      rs_min:num('rs_min'), rs_urg:num('rs_urg'), cv_max:num('cv_max'),
+      rair:txt('rair'), rair_result:num('rair_result'),
+      cough_pct:num('cough_pct'), cough_ref:num('cough_ref'),
+      bet:num('bet'), bet_min:num('bet_min'),
+      bd_rectal_pr:num('bd_rectal_pr'), bd_anal_pr:num('bd_anal_pr'),
+      bd_rectal_result:num('bd_rectal_result'), bd_anal_result:num('bd_anal_result'),
+      // ── 마노메트리 판독 소견 ──
+      imp_dec_resting:chk('imp_dec_resting'), imp_dec_squeeze:chk('imp_dec_squeeze'),
+      imp_inapp_rair:chk('imp_inapp_rair'), imp_normal_cough:chk('imp_normal_cough'),
+      imp_dec_sensation:chk('imp_dec_sensation'), imp_success_bet:chk('imp_success_bet'),
+      imp_fail_bet:chk('imp_fail_bet'), imp_insuff_elev:chk('imp_insuff_elev'),
+      imp_paradox:chk('imp_paradox'),
+      imp_text:txt('imp_text'), mano_imp:txt('mano_imp')
+    };
+  }));
+  wsOpj['!cols']=Array(200).fill({wch:16});
+  XLSX.utils.book_append_sheet(wb,wsOpj,"전체_분석용");
+
+  // ===== 시트3: 코드북 =====
+  var cb=[
+    // ══ 기본 ══
+    {변수명:'study_id',설명:'연구 식별번호',타입:'String',코딩:'DM-XXXX-YYYY'},
+    {변수명:'dexa_done',설명:'DEXA 시행 여부',타입:'Binary',코딩:'1=예 / 0=아니오'},
+    {변수명:'reg_no',설명:'영문 이니셜(대상자 확인용)',타입:'String',코딩:'성+이름 이니셜 (예: 홍길동→HGD). ID Mapping 시트 참조'},
+    {변수명:'meas_date',설명:'측정일',타입:'Date',코딩:'YYYY-MM-DD'},
+    // ══ 인구통계 ══
+    {변수명:'──',설명:'── 인구통계 ──',타입:'',코딩:''},
+    {변수명:'opj_date',설명:'초진 날짜',타입:'Date',코딩:'YYYY-MM-DD'},
+    {변수명:'dob',설명:'생년월일',타입:'Date',코딩:'YYYY-MM-DD'},
+    {변수명:'age',설명:'연령(세)',타입:'Integer',코딩:''},
+    {변수명:'sex_code',설명:'성별',타입:'Binary',코딩:'0=Female / 1=Male'},
+    {변수명:'height',설명:'신장(cm)',타입:'Continuous',코딩:''},
+    {변수명:'weight',설명:'체중(kg)',타입:'Continuous',코딩:''},
+    {변수명:'bmi',설명:'BMI(kg/m²)',타입:'Continuous',코딩:''},
+    // ══ PI ══
+    {변수명:'──',설명:'── PI CC/통증 ──',타입:'',코딩:''},
+    {변수명:'opj_cc',설명:'Chief Complaint',타입:'Text',코딩:'자유텍스트'},
+    {변수명:'opj_pain_code',설명:'통증 유무',타입:'Binary',코딩:'1=유 / 0=무'},
+    {변수명:'──',설명:'── PI 주요 발생 상황 ──',타입:'',코딩:''},
+    {변수명:'pi_sit_code',설명:'발생상황 복합코드',타입:'Text',코딩:'1=나도모르게 2=변본후 3=힘줄때 4=수면중 5=절박 (복수시 세미콜론)'},
+    {변수명:'pi_sit_passive',설명:'발생상황: 나도 모르게',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_sit_postdefec',설명:'발생상황: 변 본 후',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_sit_strain',설명:'발생상황: 힘줄 때',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_sit_nocturnal',설명:'발생상황: 수면 중',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_sit_urge',설명:'발생상황: 절박(urge)',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'──',설명:'── PI 양상 ──',타입:'',코딩:''},
+    {변수명:'pi_sx_gas',설명:'양상: 가스 누출',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_sx_mucus',설명:'양상: 점액 누출',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_sx_liquid',설명:'양상: 액체변 누출',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_sx_solid',설명:'양상: 고체변 누출',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'──',설명:'── PI 누출양상/Pad ──',타입:'',코딩:''},
+    {변수명:'pi_lk_leak',설명:'누출양상: 조금씩 샘',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_lk_soiling',설명:'누출양상: 속옷 오염',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_pad',설명:'Pad/휴지 항상 사용',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'──',설명:'── PI 악화인자 ──',타입:'',코딩:''},
+    {변수명:'pi_ag_dairy',설명:'악화인자: 유제품',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_fruit',설명:'악화인자: 과일',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_food',설명:'악화인자: 특정 음식',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_other',설명:'악화인자: 기타 음식',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_diarrhea',설명:'악화인자: 설사 시',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_loose',설명:'악화인자: 묽은 변 시',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_cough',설명:'악화인자: 기침/재채기',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_stress',설명:'악화인자: 긴장/스트레스',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_postdefec',설명:'악화인자: 변 본 후',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_ag_exercise',설명:'악화인자: 운동 시',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'──',설명:'── PI 경과 ──',타입:'',코딩:''},
+    {변수명:'pi_crs_worsening',설명:'경과: 점점 심해짐',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_crs_intermittent',설명:'경과: 간헐적 반복',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_crs_recent_worse',설명:'경과: 최근 갑자기 악화',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'──',설명:'── PI 이전치료 ──',타입:'',코딩:''},
+    {변수명:'pi_tx_code',설명:'이전치료 복합코드',타입:'Text',코딩:'0=없음 1=약물 2=바이오피드백 3=골반저운동 4=수술 5=전기치료 (복수시 세미콜론)'},
+    {변수명:'pi_tx_none',설명:'이전치료: 없음',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_tx_drug',설명:'이전치료: 약물',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_tx_bio',설명:'이전치료: 바이오피드백',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_tx_pfe',설명:'이전치료: 골반저운동',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_tx_op',설명:'이전치료: 수술',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_tx_electric',설명:'이전치료: 전기치료',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'pi_tx_other',설명:'이전치료: 기타',타입:'Text',코딩:'자유텍스트'},
+    {변수명:'pi_extra_json',설명:'AI 추출 추가정보',타입:'Text',코딩:'JSON 배열'},
+    {변수명:'──',설명:'── FISI ──',타입:'',코딩:''},
+    {변수명:'opj_fisi',설명:'FISI 합계',타입:'Integer',코딩:'0–61'},
+    {변수명:'opj_fi_gas',설명:'FISI Gas',타입:'Ordinal',코딩:'0=없음 1=1-3/월 2=1/주 3=2/주 4=1/일 5=2+/일'},
+    {변수명:'opj_fi_mucus',설명:'FISI Mucus',타입:'Ordinal',코딩:'위 동일'},
+    {변수명:'opj_fi_liquid',설명:'FISI Liquid',타입:'Ordinal',코딩:'위 동일'},
+    {변수명:'opj_fi_solid',설명:'FISI Solid',타입:'Ordinal',코딩:'위 동일'},
+    {변수명:'──',설명:'── Wexner ──',타입:'',코딩:''},
+    {변수명:'opj_wexner',설명:'Wexner 합계',타입:'Integer',코딩:'0–20'},
+    {변수명:'opj_wx_solid',설명:'Wexner Solid',타입:'Ordinal',코딩:'0=전혀없다 1=가끔 2=종종 3=매번 4=항상'},
+    {변수명:'opj_wx_liquid',설명:'Wexner Liquid',타입:'Ordinal',코딩:'위 동일'},
+    {변수명:'opj_wx_gas',설명:'Wexner Gas',타입:'Ordinal',코딩:'위 동일'},
+    {변수명:'opj_wx_pad',설명:'Wexner Pad',타입:'Ordinal',코딩:'위 동일'},
+    {변수명:'opj_wx_life',설명:'Wexner Life',타입:'Ordinal',코딩:'위 동일'},
+    {변수명:'──',설명:'── CVS/증상 ──',타입:'',코딩:''},
+    {변수명:'opj_cvs_yn_code',설명:'Prev.CVS 여부',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_cvs_result_code',설명:'CVS 결과',타입:'Ordinal',코딩:'0=WNL 1=폴립제거 2=선종 3=암 4=기타'},
+    {변수명:'opj_cvs_detail',설명:'CVS 상세',타입:'Text',코딩:''},
+    {변수명:'opj_cvs_yr',설명:'CVS 시기(년전)',타입:'Integer',코딩:''},
+    {변수명:'opj_onset_yr',설명:'Onset(년전)',타입:'Integer',코딩:''},
+    {변수명:'opj_episode',설명:'Episode 빈도',타입:'Text',코딩:'예: 3/m'},
+    {변수명:'opj_constipation_code',설명:'Constipation',타입:'Binary',코딩:'1=있음 / 0=없음'},
+    {변수명:'opj_diarrhea_code',설명:'Diarrhea',타입:'Binary',코딩:'1=있음 / 0=없음'},
+    {변수명:'opj_loose_code',설명:'Loose stool',타입:'Binary',코딩:'1=있음 / 0=없음'},
+    {변수명:'opj_defecation',설명:'배변 빈도',타입:'Text',코딩:'예: 1/d'},
+    {변수명:'──',설명:'── 과거력 ──',타입:'',코딩:''},
+    {변수명:'opj_spinal_code',설명:'Spinal injury',타입:'Nominal',코딩:'0=없음 1=압박골절 2=척추관협착증 3=HIVD 4=척추수술 5=낙상외상 6=기타'},
+    {변수명:'opj_spinal_detail',설명:'Spinal 상세',타입:'Text',코딩:''},
+    {변수명:'opj_spinal_yr',설명:'Spinal 시기(년전)',타입:'Integer',코딩:''},
+    {변수명:'opj_dementia_code',설명:'Dementia',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_bmi_raw',설명:'BMI 원문(신장/체중)',타입:'Text',코딩:'예: 163/62'},
+    {변수명:'opj_smoking_code',설명:'흡연',타입:'Nominal',코딩:'0=비흡연 1=과거흡연 2=현재흡연'},
+    {변수명:'opj_smoking_yr',설명:'흡연기간(년)',타입:'Integer',코딩:''},
+    {변수명:'opj_smoking_ppd',설명:'하루흡연량(갑)',타입:'Continuous',코딩:''},
+    {변수명:'opj_smoking_py',설명:'갑년(Pack-year)',타입:'Continuous',코딩:''},
+    {변수명:'opj_probiotics_code',설명:'유산균 복용',타입:'Nominal',코딩:'1=현재복용 / 0=미복용 / 2=복용중단'},
+    {변수명:'opj_prev_ar_yn_code',설명:'Prev.AR수술 여부',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_prev_ar_type_code',설명:'Prev.AR수술 종류',타입:'Nominal',코딩:'1=Hemorrhoidectomy 2=Fistulectomy 3=Sphincteroplasty 4=STARR 5=기타'},
+    {변수명:'opj_prev_ar_detail',설명:'Prev.AR 상세',타입:'Text',코딩:''},
+    {변수명:'opj_prev_ar_yr',설명:'Prev.AR 시기(년전)',타입:'Integer',코딩:''},
+    {변수명:'opj_hyst_code',설명:'Hysterectomy 여부',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_hyst_type',설명:'Hysterectomy 종류',타입:'Text',코딩:''},
+    {변수명:'opj_hyst_yr',설명:'Hysterectomy 시기(년전)',타입:'Integer',코딩:''},
+    {변수명:'opj_para_na',설명:'분만력 여부',타입:'Nominal',코딩:'0=분만력있음 1=미혼 2=기혼무산'},
+    {변수명:'opj_para_total',설명:'총 분만 횟수',타입:'Integer',코딩:''},
+    {변수명:'opj_para_vd',설명:'VD 횟수',타입:'Integer',코딩:''},
+    {변수명:'opj_para_cs',설명:'CS 횟수',타입:'Integer',코딩:''},
+    {변수명:'opj_para_forceps_code',설명:'기계분만',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_para_max_wt',설명:'최대 태아체중(kg)',타입:'Continuous',코딩:''},
+    {변수명:'opj_dm_code',설명:'DM',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_dm_memo',설명:'DM 상세',타입:'Text',코딩:''},
+    {변수명:'opj_htn_code',설명:'HTN',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_htn_yr',설명:'HTN 시기(년 전)',타입:'Integer',코딩:''},
+    {변수명:'opj_hl_code',설명:'HL',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_hl_yr',설명:'HL 시기(년 전)',타입:'Integer',코딩:''},
+    {변수명:'opj_ui_code',설명:'UI(요실금)',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_ui_yr',설명:'UI 시기(년 전)',타입:'Integer',코딩:''},
+    {변수명:'opj_menopause_code',설명:'폐경',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_menopause_yr',설명:'폐경 시기(년 전)',타입:'Integer',코딩:''},
+    {변수명:'opj_cancer_code',설명:'악성종양',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_cancer_yr',설명:'악성종양 시기(년 전)',타입:'Integer',코딩:''},
+    {변수명:'opj_cancer_memo',설명:'악성종양 상세',타입:'Text',코딩:''},
+    {변수명:'opj_hematologic_code',설명:'혈액질환',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_hematologic_yr',설명:'혈액질환 시기(년 전)',타입:'Integer',코딩:''},
+    {변수명:'opj_cardiac_code',설명:'심혈관질환',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_cardiac_yr',설명:'심혈관질환 시기(년 전)',타입:'Integer',코딩:''},
+    {변수명:'opj_pmhx_other',설명:'기타 과거력',타입:'Text',코딩:'[계통] 질환명 (n년전) 형태'},
+    {변수명:'──',설명:'── PE/DRE ──',타입:'',코딩:''},
+    {변수명:'opj_skin_irr_code',설명:'Skin irritation',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_patulus_code',설명:'Patulus anus',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_perineal_code',설명:'Perineal body 감소',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_stool_stain_code',설명:'Stool staining',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_feces_code',설명:'Feces',타입:'Binary',코딩:'1=있음(+) / 0=없음(-) / 9=모름'},
+    {변수명:'opj_resting_tone_code',설명:'Anal resting tone',타입:'Ordinal',코딩:'1=decreased 2=slightly decreased 3=WNL 4=increased'},
+    {변수명:'opj_squeeze_code',설명:'Squeeze pressure',타입:'Ordinal',코딩:'1=decreased 2=slightly decreased 3=WNL 4=increased'},
+    {변수명:'opj_muschel_code',설명:'Muschel coordination',타입:'Ordinal',코딩:'0=none / 1=fair(bad포함) / 2=good / 3=WNL'},
+    {변수명:'──',설명:'── A/P ──',타입:'',코딩:''},
+    {변수명:'opj_assessment',설명:'Assessment',타입:'Text',코딩:''},
+    {변수명:'opj_plan',설명:'Plan',타입:'Text',코딩:''},
+    {변수명:'opj_memo',설명:'메모',타입:'Text',코딩:''},
+    {변수명:'opj_pi_text',설명:'PI 자유서술',타입:'Text',코딩:''},
+    {변수명:'opj_raw_text',설명:'초진 전체 원문',타입:'Text',코딩:'차트 텍스트 그대로'},
+    {변수명:'──',설명:'── DEXA 체성분 (Total) ──',타입:'',코딩:''},
+    {변수명:'dexa_date',설명:'DEXA 측정일',타입:'Date',코딩:'YYYY-MM-DD'},
+    {변수명:'total_fat_pct',설명:'전체 체지방률(%)',타입:'Continuous',코딩:''},
+    {변수명:'total_centile',설명:'전체 Centile',타입:'Continuous',코딩:''},
+    {변수명:'total_mass_kg',설명:'전체 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'total_fat_g',설명:'전체 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'total_lean_g',설명:'전체 근육량(g)',타입:'Continuous',코딩:''},
+    {변수명:'total_bmc_g',설명:'전체 BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'total_fatfree_g',설명:'전체 비지방량(g)',타입:'Continuous',코딩:''},
+    {변수명:'──',설명:'── DEXA (Arms) ──',타입:'',코딩:''},
+    {변수명:'arms_fat_pct',설명:'Arms 체지방률(%)',타입:'Continuous',코딩:''},
+    {변수명:'arms_mass_kg',설명:'Arms 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'arms_fat_g',설명:'Arms 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'arms_lean_g',설명:'Arms 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'arms_bmc_g',설명:'Arms BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'arm_r_fat_pct',설명:'Arm Right %Fat',타입:'Continuous',코딩:''},
+    {변수명:'arm_r_mass_kg',설명:'Arm Right 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'arm_r_fat_g',설명:'Arm Right 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'arm_r_lean_g',설명:'Arm Right 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'arm_r_bmc_g',설명:'Arm Right BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'arm_l_fat_pct',설명:'Arm Left %Fat',타입:'Continuous',코딩:''},
+    {변수명:'arm_l_mass_kg',설명:'Arm Left 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'arm_l_fat_g',설명:'Arm Left 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'arm_l_lean_g',설명:'Arm Left 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'arm_l_bmc_g',설명:'Arm Left BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'──',설명:'── DEXA (Legs) ──',타입:'',코딩:''},
+    {변수명:'legs_fat_pct',설명:'Legs 체지방률(%)',타입:'Continuous',코딩:''},
+    {변수명:'legs_mass_kg',설명:'Legs 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'legs_fat_g',설명:'Legs 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'legs_lean_g',설명:'Legs 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'legs_bmc_g',설명:'Legs BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'leg_r_fat_pct',설명:'Leg Right %Fat',타입:'Continuous',코딩:''},
+    {변수명:'leg_r_mass_kg',설명:'Leg Right 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'leg_r_fat_g',설명:'Leg Right 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'leg_r_lean_g',설명:'Leg Right 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'leg_r_bmc_g',설명:'Leg Right BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'leg_l_fat_pct',설명:'Leg Left %Fat',타입:'Continuous',코딩:''},
+    {변수명:'leg_l_mass_kg',설명:'Leg Left 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'leg_l_fat_g',설명:'Leg Left 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'leg_l_lean_g',설명:'Leg Left 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'leg_l_bmc_g',설명:'Leg Left BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'──',설명:'── DEXA (Trunk) ──',타입:'',코딩:''},
+    {변수명:'trunk_fat_pct',설명:'Trunk 체지방률(%)',타입:'Continuous',코딩:''},
+    {변수명:'trunk_mass_kg',설명:'Trunk 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'trunk_fat_g',설명:'Trunk 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'trunk_lean_g',설명:'Trunk 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'trunk_bmc_g',설명:'Trunk BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'──',설명:'── DEXA (Android/Gynoid) ──',타입:'',코딩:''},
+    {변수명:'android_fat_pct',설명:'Android %Fat',타입:'Continuous',코딩:''},
+    {변수명:'android_mass_kg',설명:'Android 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'android_fat_g',설명:'Android 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'android_lean_g',설명:'Android 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'android_bmc_g',설명:'Android BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'gynoid_fat_pct',설명:'Gynoid %Fat',타입:'Continuous',코딩:''},
+    {변수명:'gynoid_mass_kg',설명:'Gynoid 중량(kg)',타입:'Continuous',코딩:''},
+    {변수명:'gynoid_fat_g',설명:'Gynoid 지방(g)',타입:'Continuous',코딩:''},
+    {변수명:'gynoid_lean_g',설명:'Gynoid 근육(g)',타입:'Continuous',코딩:''},
+    {변수명:'gynoid_bmc_g',설명:'Gynoid BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'ag_ratio',설명:'Android/Gynoid Ratio',타입:'Continuous',코딩:'>1.0=중심성비만'},
+    {변수명:'android_fat_korea',설명:'복부지방률-Korean(%)',타입:'Continuous',코딩:''},
+    {변수명:'gynoid_fat_korea',설명:'엉덩이지방률-Korean(%)',타입:'Continuous',코딩:''},
+    {변수명:'──',설명:'── Korean 기준 ──',타입:'',코딩:''},
+    {변수명:'korea_tissue_g',설명:'Korean 기준 Tissue(g)',타입:'Continuous',코딩:''},
+    {변수명:'korea_fat_g',설명:'Korean 기준 Fat(g)',타입:'Continuous',코딩:''},
+    {변수명:'korea_lean_g',설명:'Korean 기준 Lean(g)',타입:'Continuous',코딩:''},
+    {변수명:'korea_bmc_g',설명:'Korean 기준 BMC(g)',타입:'Continuous',코딩:''},
+    {변수명:'korea_fatfree_g',설명:'Korean 기준 FatFree(g)',타입:'Continuous',코딩:''},
+    {변수명:'asmm',설명:'ASMM(kg)',타입:'Continuous',코딩:'사지근육량 합계'},
+    {변수명:'asmi',설명:'SMI(kg/m²)',타입:'Continuous',코딩:'여성<5.4=근감소증'},
+    {변수명:'who_class',설명:'WHO 비만분류',타입:'Ordinal',코딩:'0=저체중 1=정상 2=과체중 3=비만'},
+    {변수명:'sarco_dx',설명:'근감소증 진단',타입:'Ordinal',코딩:'0=없음 1=전단계 2=근감소증 3=중증'},
+    {변수명:'bmi_dxa',설명:'BMI (DEXA 기준)',타입:'Continuous',코딩:''},
+    {변수명:'──',설명:'── DEXA 골밀도 ──',타입:'',코딩:''},
+    {변수명:'bmd_head',설명:'Head BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'bmd_arms',설명:'Arms BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'bmd_legs',설명:'Legs BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'bmd_trunk',설명:'Trunk BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'bmd_ribs',설명:'Ribs BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'bmd_spine',설명:'Spine BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'bmd_pelvis',설명:'Pelvis BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'bmd_total',설명:'Total BMD(g/cm²)',타입:'Continuous',코딩:''},
+    {변수명:'ya_pct',설명:'Young Adult %',타입:'Continuous',코딩:''},
+    {변수명:'ya_tscore',설명:'T-score',타입:'Continuous',코딩:'≥-1.0=정상 / -1~-2.5=골감소증 / ≤-2.5=골다공증'},
+    {변수명:'am_pct',설명:'Age Matched %',타입:'Continuous',코딩:''},
+    {변수명:'am_zscore',설명:'Z-score(연령매칭)',타입:'Continuous',코딩:''},
+    {변수명:'osteo_dx',설명:'골다공증 진단',타입:'Ordinal',코딩:'0=정상 1=골감소증 2=골다공증'},
+    {변수명:'──',설명:'── 마노메트리 ──',타입:'',코딩:''},
+    {변수명:'mano_date',설명:'마노메트리 측정일',타입:'Date',코딩:'YYYY-MM-DD'},
+    {변수명:'mano_timing',설명:'측정 시점',타입:'Nominal',코딩:'0=초진 1=치료전 2=치료후 3=수술전 4=수술후 5=추적1 6=추적2 7=추적3'},
+    {변수명:'mano_seq',설명:'측정 순서 번호',타입:'Integer',코딩:''},
+    {변수명:'sphincter_tone',설명:'Sphincter tone',타입:'Ordinal',코딩:'1=저하 2=정상 3=증가'},
+    {변수명:'rest_mean',설명:'Resting pressure mean(mmHg)',타입:'Continuous',코딩:'정상F:40-70'},
+    {변수명:'rest_vec',설명:'Resting pressure vector(mmHg)',타입:'Continuous',코딩:''},
+    {변수명:'sq_max',설명:'Squeezing pressure max(mmHg)',타입:'Continuous',코딩:'정상F:80-170'},
+    {변수명:'sq_vec',설명:'Squeezing pressure vector(mmHg)',타입:'Continuous',코딩:''},
+    {변수명:'sus_dur',설명:'Sustained duration(sec)',타입:'Continuous',코딩:''},
+    {변수명:'sph_len',설명:'Sphincter length(cm)',타입:'Continuous',코딩:''},
+    {변수명:'hpz',설명:'HPZ(cm)',타입:'Continuous',코딩:'High Pressure Zone'},
+    {변수명:'rs_min',설명:'Rectal sensation minimal(mL)',타입:'Continuous',코딩:'정상:10-30'},
+    {변수명:'rs_urg',설명:'Urgency volume(mL)',타입:'Continuous',코딩:'정상:70-150'},
+    {변수명:'cv_max',설명:'Maximal volume MTV(mL)',타입:'Continuous',코딩:'정상:150-250'},
+    {변수명:'rair',설명:'RAIR 원문',타입:'Text',코딩:''},
+    {변수명:'rair_result',설명:'RAIR 결과',타입:'Binary',코딩:'1=Positive / 0=Negative'},
+    {변수명:'cough_pct',설명:'Cough reflex %',타입:'Continuous',코딩:''},
+    {변수명:'cough_ref',설명:'Cough reflex 결과',타입:'Binary',코딩:'1=Positive / 0=Negative'},
+    {변수명:'bet',설명:'BET 결과',타입:'Nominal',코딩:'1=Normal / 0=Abnormal / 9=Not done'},
+    {변수명:'bet_min',설명:'BET 소요시간(분)',타입:'Continuous',코딩:''},
+    {변수명:'bd_rectal_pr',설명:'Bearing down 직장압(mmHg)',타입:'Continuous',코딩:''},
+    {변수명:'bd_anal_pr',설명:'Bearing down 항문압(mmHg)',타입:'Continuous',코딩:''},
+    {변수명:'bd_rectal_result',설명:'Bearing down 직장압 결과',타입:'Binary',코딩:'1=Normal elevation / 0=Insufficient'},
+    {변수명:'bd_anal_result',설명:'Bearing down 항문이완 결과',타입:'Nominal',코딩:'1=Normal relaxation / 0=Incomplete / 2=Paradoxical'},
+    {변수명:'──',설명:'── 마노메트리 판독소견 ──',타입:'',코딩:''},
+    {변수명:'imp_dec_resting',설명:'판독: Decreased resting pressure',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_dec_squeeze',설명:'판독: Decreased squeeze pressure',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_inapp_rair',설명:'판독: Inappropriate RAIR',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_normal_cough',설명:'판독: Normal cough reflex',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_dec_sensation',설명:'판독: Decreased rectal sensation',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_success_bet',설명:'판독: Successful BET',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_fail_bet',설명:'판독: Failed BET',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_insuff_elev',설명:'판독: Insufficient elevation',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_paradox',설명:'판독: Paradoxical contraction',타입:'Binary',코딩:'1=해당 / 0=비해당'},
+    {변수명:'imp_text',설명:'마노메트리 판독 텍스트',타입:'Text',코딩:'자유텍스트'},
+    {변수명:'mano_imp',설명:'마노메트리 임상 소견',타입:'Text',코딩:'자유텍스트'},
+  ];
+
+  var wsCB=XLSX.utils.json_to_sheet(cb);
+  wsCB["!cols"]=[{wch:30},{wch:45},{wch:12},{wch:60}];
+  XLSX.utils.book_append_sheet(wb,wsCB,"코드북");
+
+  // ===== 시트4: ID Mapping =====
+  var wsID=XLSX.utils.json_to_sheet(src.map(r=>({"연구번호":r.study_id,"영문이니셜":r.reg_no||"","측정일":r.meas_date||"","DEXA시행":r.dexa_done===1?"예":r.dexa_done===0?"아니오":"미기록","완성도%":r._completion||0})));
+  XLSX.utils.book_append_sheet(wb,wsID,"ID Mapping (내부용)");
+
+  var suffix=mode==="dexa"?"_DEXA만":"";
+  try{XLSX.writeFile(wb,"DEXA_Mano_Cohort"+suffix+"_"+new Date().toISOString().slice(0,10)+".xlsx");}catch(e){showToast("다운로드 오류: "+e.message);return;}
+  showToast("엑셀 내보내기 완료! ("+src.length+"명)");
+}
+function exportPatientList(){
+  var allRecs=window._records||records||[];
+  if(!allRecs.length){showToast('저장된 기록이 없습니다.');return;}
+  var wb=XLSX.utils.book_new();
+
+  // 시트1: 연구환자 목록 (전체)
+  var ws=XLSX.utils.json_to_sheet(allRecs.map(function(r,i){
+    var sexLabel=r.sex==='Female'||r.sex==='0'||r.sex===0?'F':r.sex==='Male'||r.sex==='1'||r.sex===1?'M':(r.sex||'-');
+    return {
+      '순번': i+1,
+      '연구번호': r.study_id||'',
+      '영문이니셜': r.reg_no||'',
+      '입력일': r.meas_date||'',
+      '초진일': r.opj_date||'',
+      '생년월일': r.dob||'',
+      '연령': r.age||'',
+      '성별': sexLabel,
+      'Chief Complaint': r.opj_cc||'',
+      'FISI': r.opj_fisi||'',
+      'Wexner': r.opj_wexner||'',
+      'DEXA시행': r.dexa_done===1?'예':r.dexa_done===0?'아니오':'미기록',
+      'DEXA측정일': r.dexa_done===1?(r.dexa_date||''):'',
+      'Assessment': r.opj_assessment||'',
+      '완성도(%)': r._completion||0,
+      '메모': r.opj_memo||''
+    };
+  }));
+  ws['!cols']=[{wch:6},{wch:16},{wch:14},{wch:12},{wch:12},{wch:12},{wch:6},{wch:4},{wch:30},{wch:6},{wch:8},{wch:8},{wch:12},{wch:20},{wch:8},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'연구환자 목록');
+
+  // 시트2: ID Mapping (등록번호-연구번호 매칭)
+  var ws2=XLSX.utils.json_to_sheet(allRecs.map(function(r,i){
+    return {
+      '순번': i+1,
+      '연구번호': r.study_id||'',
+      '영문이니셜': r.reg_no||'',
+      '입력일': r.meas_date||'',
+      '초진일': r.opj_date||'',
+      '생년월일': r.dob||'',
+      '성별': r.sex==='Female'||r.sex==='0'||r.sex===0?'F':r.sex==='Male'||r.sex==='1'||r.sex===1?'M':(r.sex||'-'),
+    };
+  }));
+  ws2['!cols']=[{wch:6},{wch:16},{wch:14},{wch:12},{wch:12},{wch:12},{wch:6}];
+  XLSX.utils.book_append_sheet(wb,ws2,'ID Mapping (내부용)');
+
+  var today=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb,'FI_환자목록_'+today+'.xlsx');
+  showToast('📋 환자목록 추출 완료 — '+allRecs.length+'명');
+}
+function exportCodebook(){
+  var wb=XLSX.utils.book_new();
+  var cb=[
+    {변수명:"study_id",설명:"연구 식별번호",타입:"String",코딩:"DM-XXXX-YYYY"},
+    {변수명:"dexa_done",설명:"DEXA 시행 여부",타입:"Binary",코딩:"1=예 / 0=아니오"},
+    {변수명:"dob",설명:"생년월일",타입:"Date",코딩:"YYYY-MM-DD"},
+    {변수명:"age",설명:"연령(세)",타입:"Integer",코딩:"세"},
+    {변수명:"sex_code",설명:"성별",타입:"Binary",코딩:"0=Female / 1=Male"},
+    {변수명:"──",설명:"── CC / 통증 ──",타입:"",코딩:""},
+    {변수명:"opj_date",설명:"초진 날짜",타입:"Date",코딩:"YYYY-MM-DD"},
+    {변수명:"opj_cc",설명:"Chief Complaint",타입:"Text",코딩:"자유텍스트"},
+    {변수명:"opj_pain_code",설명:"통증 유무",타입:"Binary",코딩:"1=유 / 0=무"},
+    {변수명:"──",설명:"── PI 구조화 ──",타입:"",코딩:""},
+    {변수명:"pi_fi_type_code",설명:"변실금 유형 복합코드",타입:"Text",코딩:"1=passive;2=변후잔변;3=묽은변;4=힘줄때;5=수면중;6=절박 (중복시 세미콜론 구분)"},
+    {변수명:"pi_type_passive",설명:"변실금유형: 나도모르게(passive)",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_type_post_defec",설명:"변실금유형: 변 본 후 잔변",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_type_liquid",설명:"변실금유형: 묽은 변일 때",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_type_strain",설명:"변실금유형: 힘줄 때",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_type_nocturnal",설명:"변실금유형: 수면 중",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_type_urge",설명:"변실금유형: 절박(urge)",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_sx_leak",설명:"양상: 조금씩 샘",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_sx_soilng",설명:"양상: 속옷 오염",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_sx_pad",설명:"양상: pad/휴지 항상 사용",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_ag_dairy",설명:"악화인자: 유제품",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_ag_fruit",설명:"악화인자: 과일",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_ag_other",설명:"악화인자: 기타 음식",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_crs_worsening",설명:"경과: 점점 심해짐",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_crs_intermittent",설명:"경과: 간헐적 반복",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_crs_recent_worse",설명:"경과: 최근 갑자기 악화",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_tx_code",설명:"이전 치료 복합코드",타입:"Text",코딩:"0=없음;1=약물;2=바이오피드백;3=골반저운동;4=수술;5=전기치료 (중복시 세미콜론)"},
+    {변수명:"pi_tx_none",설명:"이전치료: 없음",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_tx_drug",설명:"이전치료: 약물(1)",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_tx_bio",설명:"이전치료: 바이오피드백(2)",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_tx_pfe",설명:"이전치료: 골반저운동(3)",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_tx_op",설명:"이전치료: 수술(4)",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_tx_electric",설명:"이전치료: 전기치료(5)",타입:"Binary",코딩:"1=해당 / 0=비해당"},
+    {변수명:"pi_tx_other",설명:"이전치료: 기타 직접입력",타입:"Text",코딩:"자유텍스트"},
+    {변수명:"pi_extra_json",설명:"AI 추출 추가정보(JSON)",타입:"Text",코딩:"label/value/note 배열"},
+    {변수명:"──",설명:"── FISI ──",타입:"",코딩:""},
+    {변수명:"opj_fisi",설명:"FISI 합계",타입:"Integer",코딩:"0–61"},
+    {변수명:"opj_fi_gas",설명:"FISI Gas",타입:"Ordinal",코딩:"0=없음 1=1-3/월 2=1/주 3=2/주 4=1/일 5=2+/일"},
+    {변수명:"opj_fi_mucus",설명:"FISI Mucus",타입:"Ordinal",코딩:"위 동일"},
+    {변수명:"opj_fi_liquid",설명:"FISI Liquid",타입:"Ordinal",코딩:"위 동일"},
+    {변수명:"opj_fi_solid",설명:"FISI Solid",타입:"Ordinal",코딩:"위 동일"},
+    {변수명:"──",설명:"── Wexner ──",타입:"",코딩:""},
+    {변수명:"opj_wexner",설명:"Wexner 합계",타입:"Integer",코딩:"0–20"},
+    {변수명:"opj_wx_solid",설명:"Wexner Solid",타입:"Ordinal",코딩:"0=전혀없다 1=가끔 2=종종 3=매번 4=항상"},
+    {변수명:"opj_wx_liquid",설명:"Wexner Liquid",타입:"Ordinal",코딩:"위 동일"},
+    {변수명:"opj_wx_gas",설명:"Wexner Gas",타입:"Ordinal",코딩:"위 동일"},
+    {변수명:"opj_wx_pad",설명:"Wexner Pad",타입:"Ordinal",코딩:"위 동일"},
+    {변수명:"opj_wx_life",설명:"Wexner Life",타입:"Ordinal",코딩:"위 동일"},
+    {변수명:"──",설명:"── CVS / 증상 ──",타입:"",코딩:""},
+    {변수명:"opj_cvs_yn_code",설명:"Prev. CVS 여부",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_cvs_result_code",설명:"CVS 결과",타입:"Ordinal",코딩:"0=WNL / 1=폴립제거 / 2=선종 / 3=암 / 4=기타"},
+    {변수명:"opj_cvs_detail",설명:"CVS 상세",타입:"Text",코딩:""},
+    {변수명:"opj_cvs_yr",설명:"CVS 시기 (년 전)",타입:"Integer",코딩:""},
+    {변수명:"opj_onset_yr",설명:"Onset (년 전)",타입:"Integer",코딩:""},
+    {변수명:"opj_episode",설명:"Episode",타입:"Text",코딩:"예: 3/m, 2/w"},
+    {변수명:"opj_constipation_code",설명:"Constipation",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_diarrhea_code",설명:"Diarrhea",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_loose_code",설명:"Loose stool",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_defecation",설명:"Defecation 빈도",타입:"Text",코딩:""},
+    {변수명:"──",설명:"── 과거력 ──",타입:"",코딩:""},
+    {변수명:"opj_spinal_code",설명:"Spinal injury",타입:"Nominal",코딩:"0=없음 / 1=압박골절 / 2=척추관협착증 / 3=HIVD / 4=척추수술 / 5=낙상외상 / 6=기타"},
+    {변수명:"opj_spinal_detail",설명:"Spinal 상세",타입:"Text",코딩:""},
+    {변수명:"opj_spinal_yr",설명:"Spinal 시기 (년 전)",타입:"Integer",코딩:""},
+    {변수명:"opj_dementia_code",설명:"Dementia",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_bmi_raw",설명:"BMI 원문(신장/체중)",타입:"Text",코딩:""},
+    {변수명:"opj_smoking_code",설명:"흡연",타입:"Nominal",코딩:"0=비흡연 / 1=과거흡연 / 2=현재흡연"},
+    {변수명:"opj_smoking_yr",설명:"흡연 기간(년)",타입:"Integer",코딩:""},
+    {변수명:"opj_smoking_ppd",설명:"하루 흡연량(갑)",타입:"Continuous",코딩:""},
+    {변수명:"opj_smoking_py",설명:"갑년(pack-year)",타입:"Continuous",코딩:"흡연기간 × 하루갑수"},
+    {변수명:"opj_prev_ar_yn_code",설명:"Prev. anorectal surgery 여부",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_prev_ar_type_code",설명:"Prev. anorectal surgery 종류",타입:"Nominal",코딩:"1=Hemorrhoidectomy / 2=Fistulectomy / 3=Sphincteroplasty / 4=STARR / 5=기타"},
+    {변수명:"opj_prev_ar_detail",설명:"Prev. anorectal surgery 기타 상세",타입:"Text",코딩:""},
+    {변수명:"opj_prev_ar_yr",설명:"Prev. anorectal surgery 시기 (년 전)",타입:"Integer",코딩:""},
+    {변수명:"opj_hyst_code",설명:"Hysterectomy 여부",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_hyst_type",설명:"Hysterectomy 종류",타입:"Text",코딩:""},
+    {변수명:"opj_hyst_yr",설명:"Hysterectomy 시기 (년 전)",타입:"Integer",코딩:""},
+    {변수명:"opj_para_na",설명:"분만력 여부",타입:"Nominal",코딩:"0=분만력 있음 / 1=미혼 / 2=기혼(분만력없음)"},
+    {변수명:"opj_para_total",설명:"총 분만 횟수",타입:"Integer",코딩:""},
+    {변수명:"opj_para_vd",설명:"VD 횟수",타입:"Integer",코딩:""},
+    {변수명:"opj_para_cs",설명:"CS 횟수",타입:"Integer",코딩:""},
+    {변수명:"opj_para_forceps_code",설명:"기계분만",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_para_max_wt",설명:"최대 태아체중(kg)",타입:"Continuous",코딩:""},
+    {변수명:"opj_dm_code",설명:"DM",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_pmhx_cat_code",설명:"기타 과거력 — 계통 코드",타입:"Nominal",코딩:"1=HTN / 2=HL / 3=UI / 4=폐경 / 5=악성종양 / 6=혈액질환 / 7=심혈관 / 8=뇌혈관 / 9=치매 / 10=파킨슨 / 11=갑상선 / 12=호흡기 / 13=신장비뇨기 / 14=이비인후 / 15=근골격 / 99=기타"},
+    {변수명:"opj_pmhx_name",설명:"기타 과거력 — 질환명",타입:"Text",코딩:"자유텍스트"},
+    {변수명:"opj_pmhx_yr",설명:"기타 과거력 — 시기(년 전)",타입:"Integer",코딩:""},
+    {변수명:"──",설명:"── PE / DRE ──",타입:"",코딩:""},
+    {변수명:"opj_skin_irr_code",설명:"Skin irritation",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_patulus_code",설명:"Patulus anus",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_perineal_code",설명:"Thickness of perineal body 감소",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_stool_stain_code",설명:"Stool staining",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_feces_code",설명:"Feces",타입:"Binary",코딩:"1=있음(+) / 0=없음(-)"},
+    {변수명:"opj_resting_tone_code",설명:"Anal resting tone",타입:"Ordinal",코딩:"1=decreased / 2=slightly decreased / 3=WNL/normal / 4=increased"},
+    {변수명:"opj_squeeze_code",설명:"Squeeze pressure",타입:"Ordinal",코딩:"1=decreased / 2=slightly decreased / 3=mild decreased / 4=WNL/normal / 5=increased"},
+    {변수명:"opj_muschel_code",설명:"Muschel coordination",타입:"Ordinal",코딩:"0=none / 1=fair / 2=good / 3=WNL"},
+    {변수명:"──",설명:"── A/P ──",타입:"",코딩:""},
+    {변수명:"opj_assessment",설명:"Assessment",타입:"Text",코딩:""},
+    {변수명:"opj_plan",설명:"Plan",타입:"Text",코딩:""},
+    {변수명:"──",설명:"── DEXA ──",타입:"",코딩:""},
+    {변수명:"height",설명:"신장(cm)",타입:"Continuous",코딩:""},
+    {변수명:"weight",설명:"체중(kg)",타입:"Continuous",코딩:""},
+    {변수명:"bmi",설명:"BMI(kg/m²)",타입:"Continuous",코딩:""},
+    {변수명:"total_fat_pct",설명:"전체 체지방률(%)",타입:"Continuous",코딩:""},
+    {변수명:"total_lean_g",설명:"전체 근육량(g)",타입:"Continuous",코딩:""},
+    {변수명:"total_bmc_g",설명:"전체 BMC(g)",타입:"Continuous",코딩:""},
+    {변수명:"asmm",설명:"ASMM(kg)",타입:"Continuous",코딩:"사지근육량 합계"},
+    {변수명:"asmi",설명:"SMI(kg/m²)",타입:"Continuous",코딩:"여성<5.4=근감소증"},
+    {변수명:"ag_ratio",설명:"Android/Gynoid Ratio",타입:"Continuous",코딩:">1.0=중심성비만"},
+    {변수명:"bmd_total",설명:"Total BMD(g/cm²)",타입:"Continuous",코딩:""},
+    {변수명:"ya_tscore",설명:"T-score",타입:"Continuous",코딩:"≥-1.0=정상 / -1~-2.5=골감소증 / ≤-2.5=골다공증"},
+    {변수명:"osteo_dx",설명:"골다공증 진단",타입:"Text",코딩:"정상/골감소증/골다공증"},
+    {변수명:"──",설명:"── 마노메트리 ──",타입:"",코딩:""},
+    {변수명:"rest_mean",설명:"Resting pressure mean(mmHg)",타입:"Continuous",코딩:"정상F:40-70"},
+    {변수명:"sq_max",설명:"Squeezing pressure max(mmHg)",타입:"Continuous",코딩:"정상F:80-170"},
+    {변수명:"sph_len",설명:"Sphincter length(cm)",타입:"Continuous",코딩:""},
+    {변수명:"rs_min",설명:"Rectal sensation minimal(mL)",타입:"Continuous",코딩:"정상:10-30"},
+    {변수명:"rs_urg",설명:"Urgency volume(mL)",타입:"Continuous",코딩:"정상:70-150"},
+    {변수명:"cv_max",설명:"Maximal volume MTV(mL)",타입:"Continuous",코딩:"정상:150-250"},
+    {변수명:"rair_result",설명:"RAIR",타입:"Text",코딩:"Positive/Negative"},
+    {변수명:"bet",설명:"BET",타입:"Text",코딩:"Normal/Abnormal/Not done"},
+    {변수명:"bd_rectal_result",설명:"Bearing down 직장압",타입:"Text",코딩:"Normal elevation/Insufficient/Decreased"},
+    {변수명:"bd_anal_result",설명:"Bearing down 항문이완",타입:"Text",코딩:"Normal relaxation/Incomplete/Paradoxical"},
+  ];
+  var ws=XLSX.utils.json_to_sheet(cb);
+  ws["!cols"]=[{wch:28},{wch:38},{wch:12},{wch:60}];
+  var wb2=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb2,ws,"코드북");
+  try{XLSX.writeFile(wb2,"코드북_"+new Date().toISOString().slice(0,10)+".xlsx");}
+  catch(e){showToast("다운로드 오류: "+e.message);return;}
+  showToast("📖 코드북 추출 완료!");
+}
+
+function renderOpjCheck(){
+  var g=function(id){var e=document.getElementById(id);return e?e.value||'':'';}
+  var pm=function(v){return v==='+'?'+':(v==='-'?'-':'');};
+  var spinalMap={'0':'없음(-)','1':'압박골절','2':'척추관협착증','3':'HIVD/디스크','4':'척추수술','5':'기타'};
+  var lines=[];
+  lines.push('외래초진 ('+g('opj_date')+')');
+  lines.push('CC: '+g('opj_cc')+'   통증: '+g('opj_pain'));
+  lines.push('');
+  lines.push('[PI] '+g('opj_pi_text'));
+  lines.push('');
+  lines.push('[FISI] 합계:'+g('opj_fisi')+'  Gas:'+g('opj_fi_gas')+' Mucus:'+g('opj_fi_mucus')+' Liquid:'+g('opj_fi_liquid')+' Solid:'+g('opj_fi_solid'));
+  lines.push('[Wexner] 합계:'+g('opj_wexner')+'  Solid:'+g('opj_wx_solid')+' Liquid:'+g('opj_wx_liquid')+' Gas:'+g('opj_wx_gas')+' Pad:'+g('opj_wx_pad')+' Life:'+g('opj_wx_life'));
+  lines.push('');
+  lines.push('Onset: '+g('opj_onset_yr')+'년 전   Episode: '+g('opj_episode')+'   Defecation: '+g('opj_defecation'));
+  lines.push('Constipation: '+pm(g('opj_constipation'))+'   Diarrhea: '+pm(g('opj_diarrhea'))+'   Loose stool: '+pm(g('opj_loose')));
+  lines.push('');
+  var spinalTxt=spinalMap[g('opj_spinal')]||(g('opj_spinal')||'-');
+  if(g('opj_spinal_detail'))spinalTxt+=' ('+g('opj_spinal_detail')+')';
+  lines.push('Spinal injury: '+spinalTxt+'   Dementia: '+pm(g('opj_dementia')));
+  lines.push('BMI: '+g('opj_bmi_raw')+'   Smoking: '+pm(g('opj_smoking'))+(g('opj_smoking_detail')?' ('+g('opj_smoking_detail')+')':''));
+  lines.push('Prev. AR Sx: '+pm(g('opj_prev_ar_yn'))+(g('opj_prev_ar')?' ('+g('opj_prev_ar')+')':''));
+  lines.push('Hysterectomy: '+pm(g('opj_hyst'))+(g('opj_hyst_detail')?' ('+g('opj_hyst_detail')+')':''));
+  var paraStr='';
+  if(g('opj_para_na')==='1'){paraStr='미혼';} else if(g('opj_para_na')==='2'){paraStr='기혼(분만력없음)';}
+  else{
+    var pts=[];
+    if(g('opj_para_total'))pts.push('총'+g('opj_para_total')+'명');
+    if(g('opj_para_vd'))pts.push('VD '+g('opj_para_vd')+'회');
+    if(g('opj_para_cs'))pts.push('CS '+g('opj_para_cs')+'회');
+    if(g('opj_para_forceps')==='+')pts.push('기계분만+');
+    if(g('opj_para_max_wt'))pts.push('최대'+g('opj_para_max_wt')+'kg');
+    paraStr=pts.join(', ')||'-';
+  }
+  lines.push('Para: '+paraStr);
+  lines.push('DM: '+pm(g('opj_dm'))+'   HTN: '+pm(g('opj_htn'))+'   HL: '+pm(g('opj_hl'))+'   UI: '+pm(g('opj_ui'))+'   폐경: '+pm(g('opj_menopause'))+'   악성종양: '+pm(g('opj_cancer')));
+  lines.push('Prev. CVS: '+pm(g('opj_cvs_yn'))+(g('opj_cvs')?' '+g('opj_cvs'):''));
+  if(g('opj_pmhx'))lines.push('Other PMHx: '+g('opj_pmhx'));
+  lines.push('');
+  lines.push('[PE] Skin irr: '+pm(g('opj_skin_irr'))+'   Patulus: '+pm(g('opj_patulus'))+'   Perineal: '+pm(g('opj_perineal'))+'   Stool staining: '+pm(g('opj_stool_stain')));
+  if(g('opj_pe_etc'))lines.push('     기타: '+g('opj_pe_etc'));
+  lines.push('[DRE] Resting: '+g('opj_resting_tone')+'   Squeeze: '+g('opj_squeeze')+'   Muschel: '+g('opj_muschel'));
+  lines.push('');
+  lines.push('A: '+g('opj_assessment')+'   P: '+g('opj_plan'));
+  if(g('opj_memo'))lines.push('메모: '+g('opj_memo'));
+  var el=document.getElementById('opj-check-content');
+  if(el)el.textContent=lines.join('\n');
+  // 원문 표시
+  var rawVal=document.getElementById('opj_raw_text')?document.getElementById('opj_raw_text').value:'';
+  var rawDisp=document.getElementById('opj-raw-display');
+  var rawContent=document.getElementById('opj-raw-display-content');
+  if(rawDisp&&rawContent){
+    if(rawVal.trim()){
+      rawContent.textContent=rawVal.trim();
+      rawDisp.style.display='block';
+    }else{
+      rawDisp.style.display='none';
+    }
+  }
+}
+
+function showToast(msg){var t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+
+document.addEventListener('DOMContentLoaded',function(){
+  renderPiCodingBox();
+
+  // ===== 초진: Gemini 방식 파싱 =====
+  var OPJ_PROMPT='아래는 외래 초진 차트입니다. 구조화된 JSON만 반환하세요. 설명 없이 JSON만.\n\n※ 코드 규칙 (반드시 준수):\n- opj_pain: 무=0, 유=1\n- opj_smoking: 비흡연/-=0, 과거흡연=1, 현재흡연=2\n- opj_constipation/diarrhea/loose/prev_ar_yn/hyst/dm/dementia/skin_irr/patulus/perineal/stool_stain/feces: +=1, -=0\n- opj_spinal: 없음/-=0, 압박골절=1, 척추관협착증=2, HIVD=3, 척추수술=4, 낙상/외상=5, 기타=6\n- opj_cvs_result: WNL=0, 폴립제거=1, 선종=2, 암=3, 기타=4\n- opj_prev_ar_type: hemorrhoidectomy=1, fistulectomy=2, sphincteroplasty=3, STARR=4, 기타=5\n- opj_resting_tone: decreased=1, slightly decreased=2, WNL/normal/정상=3, increased=4\n- opj_squeeze: decreased=1, slightly/mild decreased=2, WNL/normal/정상=3, increased=4\n- opj_muschel: none/not good=0, fair/so so=1, good/정상=2, WNL=3\n- opj_cvs_yn: -=0, +=1\n- opj_para_na: 분만력있음=0, 미혼=1, 기혼(분만력없음)/Para:0=2\n\n추출 필드:\n{\n  "opj_date":"YYYY-MM-DD",\n  "opj_cc":"CC 한줄",\n  "opj_pain":0또는1,\n  "opj_pi_text":"PI 자유서술 원문 그대로",\n  "opj_fisi":숫자,\n  "opj_wexner":숫자,\n  "opj_cvs_yn":0또는1,\n  "opj_cvs_result":0-4,\n  "opj_cvs_detail":"상세텍스트",\n  "opj_cvs_yr":년전숫자,\n  "opj_onset_yr":발병년수숫자,\n  "opj_episode":"빈도텍스트",\n  "opj_constipation":0또는1,\n  "opj_diarrhea":0또는1,\n  "opj_loose":0또는1,\n  "opj_defecation":"배변빈도텍스트",\n  "opj_spinal":0-6,\n  "opj_spinal_detail":"상세텍스트(있을때만)",\n  "opj_spinal_yr":년전숫자(있을때만),\n  "opj_dementia":0또는1,\n  "opj_bmi_raw":"신장/체중원문",\n  "opj_smoking":0또는1또는2,\n  "opj_smoking_yr":흡연기간년수(흡연자만),\n  "opj_smoking_ppd":하루갑수(흡연자만),\n  "opj_prev_ar_yn":0또는1,\n  "opj_prev_ar_type":1-5(수술있을때만),\n  "opj_prev_ar_detail":"기타상세(5번일때)",\n  "opj_prev_ar_yr":년전숫자,\n  "opj_hyst":0또는1,\n  "opj_hyst_type":"수술종류텍스트(있을때만)",\n  "opj_hyst_yr":년전숫자(있을때만),\n  "opj_para_na":0=분만력있음 1=미혼 2=기혼무산,\n  "opj_para_total":총분만횟수숫자,\n  "opj_para_vd":VD횟수숫자,\n  "opj_para_cs":CS횟수숫자,\n  "opj_para_forceps":0또는1,\n  "opj_para_max_wt":최대태아체중kg숫자,\n  "opj_dm":0또는1,\n  "opj_dm_memo":"메모(있을때만)",\n  "opj_pmhx_list":[{"cat":계통코드숫자,"name":"질환명","yr":년전숫자}],\n  "opj_skin_irr":0또는1,\n  "opj_patulus":0또는1,\n  "opj_perineal":0또는1,\n  "opj_stool_stain":0또는1,\n  "opj_feces":0또는1,\n  "opj_pe_etc":"기타PE소견(있을때만)",\n  "opj_resting_tone":1-4,\n  "opj_squeeze":1-4,\n  "opj_muschel":0-3,\n  "opj_assessment":"진단텍스트",\n  "opj_plan":"계획텍스트"\n}\n\n※ opj_pmhx_list 계통코드: 1=HTN 2=HL 3=UI 4=폐경 5=악성종양 6=혈액질환 7=심혈관 8=뇌혈관 9=치매 10=파킨슨 11=갑상선 12=호흡기 13=신장비뇨기 14=이비인후 15=근골격 99=기타\n예시: [{"cat":1,"name":"HTN","yr":5},{"cat":5,"name":"자궁내막암","yr":20}]\n\n차트:\n[여기에 초진 텍스트 붙여넣기]';
+
+
+  function renderParsed(p){
+    var labels={opj_date:'초진일',opj_cc:'Chief Complaint',opj_pain:'통증',opj_fisi:'FISI',opj_wexner:'Wexner',opj_onset:'Onset',opj_episode:'Episode',opj_bowel:'변비/설사',opj_loose:'Loose stool',opj_bss:'BSS',opj_bmi_raw:'신장/체중',opj_smoking:'Smoking',opj_alcohol:'알코올',opj_probiotics:'유산균',opj_dm:'DM',opj_htn:'HTN',opj_bph:'BPH',opj_spinal:'Spinal injury',opj_dementia:'Dementia',opj_ui:'UI',opj_cvs:'Prev.CVS',opj_prev_ar:'Prev.anorectal',opj_hyst:'Hysterectomy',opj_para:'Para',opj_pmhx:'PMHx',opj_skin_irr:'Skin irr.',opj_patulus:'Patulus',opj_perineal:'Perineal body',opj_stool_stain:'Stool staining',opj_pe_etc:'기타PE',opj_resting_tone:'Resting tone',opj_squeeze:'Squeeze',opj_muschel:'Muschel',opj_assessment:'Assessment',opj_plan:'Plan'};
+    var items=Object.keys(labels).filter(k=>p[k]!==undefined&&String(p[k])!=='');
+    var html='<div class="parsed-grid">'+items.map(k=>'<div class="parsed-item"><div class="parsed-item-label">'+labels[k]+'</div><div class="parsed-item-value">'+p[k]+'</div></div>').join('')+'</div>';
+    if(p.opj_pi_text)html+='<div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin:6px 0 4px;">Present Illness 원문</div><div class="pi-block">'+p.opj_pi_text+'</div>';
+    document.getElementById('opj-summary-content').innerHTML=html;
+    document.getElementById('opj-parsed-card').style.display='block';
+  }
+
+  // ===== DEXA 결과 뷰어 =====
+;
+
+  function renderDexaViewer(patients){
+    if(!patients.length){document.getElementById('dexa-viewer-content').innerHTML='<div class="dv-empty">데이터를 파싱하지 못했습니다.</div>';return;}
+    var html='';
+    patients.forEach(function(p,idx){
+      if(patients.length>1)html+='<div class="dv-section-title" style="font-size:13px;color:var(--text);border-color:var(--border2);">환자 '+(idx+1)+' &nbsp;·&nbsp; '+(p.sex||'')+(p.age?' '+p.age+'세':'')+'</div>';
+      var asmiCut=p.sex==='Male'?7.0:5.4;
+      var asmiPct=p.asmi?Math.min(Math.round(p.asmi/asmiCut*100),100):0;
+      var asmiOk=!p.asmi||p.asmi>=asmiCut;
+      var fatBarPct=p.total_fat_pct?Math.min(p.total_fat_pct,50)/50*100:0;
+      var fatOk=p.sex==='Male'?p.total_fat_pct<25:p.total_fat_pct<35;
+      var agWarn=p.ag_ratio&&p.ag_ratio>1.0;
+      html+='<div class="dv-grid">';
+      html+='<div class="dv-card"><div class="dv-label">신체 정보</div><div class="dv-value" style="font-size:16px;">'+(p.height||'--')+' <span style="font-size:12px;font-weight:400;">cm</span> / '+(p.weight||'--')+' <span style="font-size:12px;font-weight:400;">kg</span></div><div class="dv-unit" style="margin-top:4px;">BMI <strong>'+(p.bmi||'--')+'</strong> kg/m²</div></div>';
+      html+='<div class="dv-card '+(fatOk?'':'hi-amber')+'"><div class="dv-label">체지방률</div><div class="dv-value">'+(p.total_fat_pct!=null?p.total_fat_pct:'--')+'<span style="font-size:14px;font-weight:400;"> %</span></div><div class="dv-bar-wrap" style="margin:6px 0 4px;"><div class="dv-bar-bg"><div class="dv-bar-fill" style="width:'+fatBarPct+'%;background:'+(fatOk?'#1D9E75':'#EF9F27')+';"></div></div></div><div class="dv-unit">근육량 '+(p.total_lean_g?(p.total_lean_g>=1000?(p.total_lean_g/1000).toFixed(1)+' kg':p.total_lean_g+' g'):'-')+'</div></div>';
+      html+='<div class="dv-card '+(asmiOk?'hi-green':'hi-amber')+'"><div class="dv-label">SMI (근감소증)</div><div class="dv-value">'+(p.asmi||'--')+'<span style="font-size:13px;font-weight:400;"> kg/m²</span></div><div class="dv-bar-wrap" style="margin:6px 0 4px;"><div class="dv-bar-bg"><div class="dv-bar-fill" style="width:'+asmiPct+'%;background:'+(asmiOk?'#1D9E75':'#E24B4A')+';"></div></div></div><div class="dv-unit">ASMM '+(p.asmm||'-')+' kg · 기준 '+asmiCut+' kg/m²</div><span class="dv-badge '+(p.sarco_status==='근감소증'?'warn':p.sarco_status==='근감소 위험'?'purple':'ok')+'">'+(p.sarco_status||'-')+'</span></div>';
+      var osteoOk=!p.osteo_dx||p.osteo_dx==='정상';
+      html+='<div class="dv-card '+(osteoOk?'hi-green':p.osteo_dx==='골다공증'?'hi-amber':'hi-purple')+'"><div class="dv-label">골밀도 (Total BMD)</div><div class="dv-value">'+(p.bmd_total||'--')+'<span style="font-size:12px;font-weight:400;"> g/cm²</span></div><div class="dv-unit" style="margin-top:4px;">T-score <strong>'+(p.ya_tscore!=null?p.ya_tscore:'-')+'</strong> &nbsp;·&nbsp; Z-score <strong>'+(p.am_zscore!=null?p.am_zscore:'-')+'</strong></div><span class="dv-badge '+(osteoOk?'ok':p.osteo_dx==='골다공증'?'warn':'purple')+'">'+(p.osteo_dx||'-')+'</span></div>';
+      html+='<div class="dv-card '+(agWarn?'hi-amber':'')+'"><div class="dv-label">지방 분포 (A/G Ratio)</div><div class="dv-value">'+(p.ag_ratio||'--')+'</div><div class="dv-unit" style="margin-top:4px;">Android <strong>'+(p.android_fat_pct||'-')+'%</strong> &nbsp;·&nbsp; Gynoid <strong>'+(p.gynoid_fat_pct||'-')+'%</strong></div>'+(agWarn?'<span class="dv-badge warn">중심성 비만 경향</span>':'<span class="dv-badge ok">정상 분포</span>')+'</div>';
+      html+='</div>';
+      // 전체 리포트 텍스트 원문 표시
+      if(p.full_report){
+        html+='<div class="dv-section-title" style="margin-top:16px;">판독 리포트 전문</div>';
+        html+='<div class="dv-imp" style="white-space:pre-wrap;font-family:inherit;line-height:1.8;font-size:12px;">'+p.full_report.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
+      } else {
+        // 구버전 호환: imp_summary + mano_imp
+        if(p.imp_summary){html+='<div class="dv-section-title">종합 소견</div><div class="dv-imp">'+p.imp_summary+'</div>';}
+        if(p.mano_imp){html+='<div class="dv-section-title">마노메트리 소견</div><div class="dv-imp" style="border-left:3px solid var(--blue);padding-left:12px;">'+p.mano_imp+'</div>';}
+      }
+      if(idx<patients.length-1)html+='<div style="height:1px;background:var(--border);margin:16px 0;"></div>';
+    });
+    document.getElementById('dexa-viewer-content').innerHTML=html;
+  }
+
+  // ===== 통합 프롬프트: JSON(폼입력) + 리포트(뷰어) 동시 =====
+  var PROMPT_JSON='당신은 한국 대장항문외과 변실금 코호트 연구의 CRF 데이터 입력 전문가입니다.\n아래 초진 차트(+DEXA 이미지+마노메트리 이미지)를 분석합니다.\n\n【필수 규칙】\n1. PI 체크박스(pi_sit_*, pi_sx_*, pi_lk_*, pi_pad, pi_ag_*, pi_crs_*, pi_tx_*)는 해당=1, 비해당=0으로 모두 반환. 누락 금지.\n2. opj_probiotics: 차트에 "유산균-" "유산균 안함" "유산균 없음"이면 반드시 0. "유산균+" "유산균 복용 중"이면 1.\n3. opj_cardiac: PMHx에 CVD, 심장, PCI, 부정맥, 뇌졸중, CVA, 뇌경색 등이 있으면 1.\n4. opj_onset_yr: Onset 텍스트(3YA, 10MA 등)에서 숫자만 추출하여 정수로 반환.\n5. pi_ag_food: 특정 음식(국물, 기름진 음식, 쑥떡 등) 언급 시 1.\n6. pi_ag_postdefec: "변 본 후 더 샘" "배변 후 누출" 언급 시 1.\n7. pi_ag_exercise: "걸을 때" "운동 시" "활동 시" 샌다고 언급 시 1.\n8. pi_tx_*: 이전 치료력 반드시 파악. 치료받은 적 없으면 pi_tx_none=1. 약물=pi_tx_drug=1. 전기치료=pi_tx_electric=1.\n9. pi_crs_*: 3년 이상 지속이면 pi_crs_intermittent 또는 pi_crs_worsening 판단.\n10. 반환 전 한 번 더 검토하여 누락/오류 없도록.\n없는 항목은 생략. 숫자는 단위 없이.\n\n【코드표 — 반드시 아래 숫자코드로 반환】\n- opj_pain: 유=1, 무=0\n- opj_smoking: 비흡연/-=0, 과거흡연=1, 현재흡연=2\n- opj_probiotics: 현재복용중(유산균+)=1, 복용안함/없음/유산균-/-=0, 복용중단=2 ※주의: 차트에 "유산균-"이면 반드시 0\n- opj_spinal: 없음/-=0, 압박골절=1, 척추관협착증=2, HIVD/디스크=3, 척추수술/감압술/고정술=4, 낙상/외상=5, 기타=6\n- opj_dementia: 없음/-=0, 있음/인지장애/치매=1\n- opj_prev_ar_yn: 없음/-=0, 있음=1\n- opj_prev_ar_type: 치핵수술=1, 치루수술=2, 괄약근성형=3, STARR=4, 기타=5\n- opj_hyst: 없음/-=0, 있음=1\n- opj_para: 없음/-이면 "-", 있으면 원문그대로(예:"3,VD,4.2kg"), 미혼이면 "미혼"\n- opj_dm/htn/hl/ui/menopause/cancer/cardiac/hematologic: 없음/-=0, 있음=1\n- opj_cvs: 없으면 "-", 있으면 텍스트(예:"2YA,WNL"/"3년전,폴립제거")\n- opj_constipation/diarrhea/loose: +=1, -=0\n- opj_resting_tone/opj_squeeze: decreased=1, slightly/mild decreased=2, WNL/정상=3, increased=4\n- opj_muschel: none/bad=0, fair=1, good=2, WNL/정상=3\n- opj_cvs_result: WNL/이상없음=0, 폴립제거=1, 선종=2, 암=3, 기타=4\n- pi_sit_*/pi_sx_*/pi_lk_*/pi_pad/pi_ag_*/pi_crs_*/pi_tx_*: 해당=1, 아님=0\n- who_class: 저체중=0, 정상=1, 과체중=2, 비만=3\n- osteo_dx: 정상=0, 골감소증=1, 골다공증=2\n- rair_result/cough_ref: Positive=1, Negative=0\n- bet: Normal=1, Abnormal=0, Not done=9\n- bd_rectal_result: Normal elevation=1, Insufficient=0\n- bd_anal_result: Normal relaxation=1, Incomplete=0, Paradoxical=2\n- sphincter_tone: 저하=1, 정상=2, 증가=3\n\n==PART1: JSON==\n{\n  "opj_date":"YYYY-MM-DD", "opj_cc":"CC한줄", "opj_pain":0또는1,\n\n  "opj_fisi":합계, "opj_fi_gas":0-5, "opj_fi_mucus":0-5, "opj_fi_liquid":0-5, "opj_fi_solid":0-5,\n  "opj_wexner":합계, "opj_wx_solid":0-4, "opj_wx_liquid":0-4, "opj_wx_gas":0-4, "opj_wx_pad":0-4, "opj_wx_life":0-4,\n\n  "opj_onset":"Onset텍스트", "opj_episode":"빈도", "opj_defecation":"배변빈도",\n  "opj_constipation":0또는1, "opj_diarrhea":0또는1, "opj_loose":0또는1,\n\n  "opj_spinal":0-6코드, "opj_spinal_detail":"상세", "opj_spinal_yr":년전숫자,\n  "opj_dementia":0또는1,\n  "opj_bmi_raw":"신장/체중원문",\n  "opj_smoking":0또는1또는2,\n  "opj_probiotics":0또는1또는2,\n  "opj_prev_ar_yn":0또는1, "opj_prev_ar_type":1-5코드, "opj_prev_ar_detail":"상세", "opj_prev_ar_yr":년전,\n  "opj_hyst":0또는1, "opj_hyst_type":"종류", "opj_hyst_yr":년전,\n  "opj_para":"원문또는-",\n  "opj_dm":0또는1, "opj_htn":0또는1, "opj_hl":0또는1,\n  "opj_cvs":"텍스트또는-", "opj_cvs_yr":년전,\n  "opj_ui":0또는1,\n  "opj_menopause":0또는1, "opj_cancer":0또는1, "opj_cancer_memo":"종류",\n  "opj_cardiac":0또는1, "opj_hematologic":0또는1,\n  "opj_pmhx":"Other PMHx — 질병명만 콤마 구분 (병원명/부가설명 제외. 예: HTN, HL, 자가면역간염, CVD)",\n\n  "opj_skin_irr":0또는1, "opj_patulus":0또는1, "opj_perineal":0또는1, "opj_stool_stain":0또는1,\n  "opj_pe_etc":"기타PE", "opj_feces":0또는1,\n  "opj_resting_tone":1-4코드, "opj_squeeze":1-4코드, "opj_muschel":0-3코드,\n\n  "opj_assessment":"텍스트", "opj_plan":"텍스트",\n  "opj_pi_text":"PI핵심요약",\n  "opj_raw_text":"초진차트전체원문그대로",\n\n  "pi_sit_passive":0또는1, "pi_sit_postdefec":0또는1, "pi_sit_strain":0또는1,\n  "pi_sit_nocturnal":0또는1, "pi_sit_urge":0또는1,\n  "pi_sx_gas":0또는1, "pi_sx_mucus":0또는1, "pi_sx_liquid":0또는1, "pi_sx_solid":0또는1,\n  "pi_lk_leak":0또는1, "pi_lk_soiling":0또는1, "pi_pad":0또는1,\n  "pi_ag_dairy":0또는1, "pi_ag_fruit":0또는1, "pi_ag_food":0또는1, "pi_ag_other":0또는1,\n  "pi_ag_diarrhea":0또는1, "pi_ag_loose":0또는1, "pi_ag_cough":0또는1,\n  "pi_ag_stress":0또는1, "pi_ag_postdefec":0또는1, "pi_ag_exercise":0또는1,\n  "pi_crs_worsening":0또는1, "pi_crs_intermittent":0또는1, "pi_crs_recent_worse":0또는1,\n  "pi_tx_none":0또는1, "pi_tx_drug":0또는1, "pi_tx_bio":0또는1,\n  "pi_tx_pfe":0또는1, "pi_tx_op":0또는1, "pi_tx_electric":0또는1, "pi_tx_other":"기타치료명",\n\n  "dob":"YYYY-MM-DD", "age":숫자, "sex":"Male/Female",\n  "height":cm, "weight":kg, "bmi":값, "dexa_date":"YYYY-MM-DD",\n  "total_fat_pct":값, "total_centile":값, "total_mass_kg":값, "total_fat_g":값, "total_lean_g":값, "total_bmc_g":값, "total_fatfree_g":값,\n  "arms_fat_pct":값, "arms_mass_kg":값, "arms_fat_g":값, "arms_lean_g":값, "arms_bmc_g":값,\n  "arm_r_fat_pct":값, "arm_r_mass_kg":값, "arm_r_fat_g":값, "arm_r_lean_g":값, "arm_r_bmc_g":값,\n  "arm_l_fat_pct":값, "arm_l_mass_kg":값, "arm_l_fat_g":값, "arm_l_lean_g":값, "arm_l_bmc_g":값,\n  "legs_fat_pct":값, "legs_mass_kg":값, "legs_fat_g":값, "legs_lean_g":값, "legs_bmc_g":값,\n  "leg_r_fat_pct":값, "leg_r_mass_kg":값, "leg_r_fat_g":값, "leg_r_lean_g":값, "leg_r_bmc_g":값,\n  "leg_l_fat_pct":값, "leg_l_mass_kg":값, "leg_l_fat_g":값, "leg_l_lean_g":값, "leg_l_bmc_g":값,\n  "trunk_fat_pct":값, "trunk_mass_kg":값, "trunk_fat_g":값, "trunk_lean_g":값, "trunk_bmc_g":값,\n  "android_fat_pct":값, "android_mass_kg":값, "android_fat_g":값, "android_lean_g":값, "android_bmc_g":값,\n  "gynoid_fat_pct":값, "gynoid_mass_kg":값, "gynoid_fat_g":값, "gynoid_lean_g":값, "gynoid_bmc_g":값,\n  "ag_ratio":값, "asmi":값, "asmm":값,\n  "bmd_head":값, "bmd_arms":값, "bmd_legs":값, "bmd_trunk":값, "bmd_ribs":값, "bmd_spine":값, "bmd_pelvis":값, "bmd_total":값,\n  "ya_pct":값, "ya_tscore":값, "am_pct":값, "am_zscore":값,\n  "bmi_dxa":값, "who_class":0-3코드, "osteo_dx":0-2코드,\n  "mano_date":"YYYY-MM-DD", "sphincter_tone":1-3코드,\n  "rest_mean":값, "sq_max":값, "sus_dur":값, "sph_len":값, "hpz":값,\n  "rs_min":값, "rs_urg":값, "cv_max":값,\n  "rair":값, "rair_result":0또는1,\n  "cough_pct":값, "cough_ref":0또는1,\n  "bet":0또는1또는9, "bet_min":값,\n  "bd_rectal_pr":값, "bd_anal_pr":값,\n  "bd_rectal_result":0또는1, "bd_anal_result":0또는1또는2\n}\n==ENDPART1==\n\n==PART2: REPORT==\n(DEXA 있는 경우만. 한국어 임상 리포트.)\n[DXA Full Report]\n1. Patient Information / 2. BMD Analysis / 3. Muscle Mass / 4. Fat Analysis\n[종합 소견] / [Anorectal Manometry] (마노메트리 있는 경우)\n==ENDPART2==';
+
+  var cpb=document.getElementById('copy-prompt-btn');if(cpb)cpb.addEventListener('click',function(){
+    navigator.clipboard.writeText(PROMPT_JSON).then(()=>showToast('✅ 프롬프트 복사 완료! Gemini에 이미지와 함께 붙여넣으세요.')).catch(()=>{
+      var ta=document.createElement('textarea');ta.value=PROMPT_JSON;ta.style.cssText='position:fixed;top:0;left:0;opacity:0.01';
+      document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e){}ta.remove();
+      showToast('✅ 프롬프트 복사 완료!');
+    });
+  });
+
+  // 리포트 버튼 (있을 경우만)
+  var copyReportBtn=document.getElementById('copy-report-prompt-btn');
+  if(copyReportBtn) copyReportBtn.addEventListener('click',function(){showToast('통합 프롬프트를 사용하세요!');});
+
+  var ajb=document.getElementById('apply-json-btn');if(ajb)ajb.addEventListener('click',function(){
+    var raw=document.getElementById('json-paste').value.trim();
+    if(!raw){showToast('Gemini 답변을 붙여넣어 주세요.');return;}
+
+    // PART1: JSON 파싱
+    var jsonPart=raw;
+    var p1m=raw.match(/==PART1:\s*JSON==\s*([\s\S]*?)==ENDPART1==/i);
+    if(p1m) jsonPart=p1m[1];
+    var parsed={};
+    try{var m=jsonPart.match(/\{[\s\S]*\}/);if(m)parsed=JSON.parse(m[0]);}catch(e){}
+
+    // ── 텍스트값 → 숫자코드 자동 변환 ──
+    var convMap={
+      opj_pain:    {'유':1,'무':0,'1':1,'0':0},
+      opj_smoking: {'-':0,'비흡연':0,'과거흡연':1,'과거 흡연':1,'현재흡연':2,'현재 흡연':2,'+':2,'0':0,'1':1,'2':2},
+      opj_constipation:{'+':1,'-':0},opj_diarrhea:{'+':1,'-':0},
+      opj_loose:   {'+':1,'-':0,'none':0},
+      opj_dementia:{'+':1,'-':0},opj_dm:{'+':1,'-':0},
+      opj_hyst:    {'+':1,'-':0},opj_prev_ar_yn:{'+':1,'-':0},
+      opj_cvs_yn:  {'+':1,'-':0},opj_para_forceps:{'+':1,'-':0},
+      opj_htn:     {'+':1,'-':0,'1':1,'0':0},opj_hl:{'+':1,'-':0,'1':1,'0':0},
+      opj_ui:      {'+':1,'-':0,'1':1,'0':0},opj_menopause:{'+':1,'-':0,'1':1,'0':0},
+      opj_cancer:  {'+':1,'-':0,'1':1,'0':0},opj_feces:{'+':1,'-':0,'1':1,'0':0},
+      opj_probiotics:{'1':1,'0':0,'2':2,'+':1,'-':0,'복용중단':2,'중단':2},
+      opj_para_na: {'0':0,'분만력있음':0,'있음':0,'해당없음':0,'미혼':1,'미혼무산':1,'미혼/무산':1,'1':1,'기혼':2,'기혼무산':2,'기혼(분만력없음)':2,'2':2},
+      opj_skin_irr:{'+':1,'-':0},opj_patulus:{'+':1,'-':0},
+      opj_perineal:{'+':1,'-':0},opj_stool_stain:{'+':1,'-':0},opj_feces:{'+':1,'-':0},
+      opj_resting_tone:{'decreased':1,'slightly decreased':2,'mild decreased':2,'wnl':3,'wNL':3,'WNL':3,'normal':3,'정상':3,'increased':4},
+      opj_squeeze: {'decreased':1,'slightly decreased':2,'mild decreased':2,'wnl':3,'WNL':3,'normal':3,'정상':3,'increased':4},
+      opj_muschel: {'none':0,'없음':0,'fair':1,'bad':1,'poor':1,'not good':1,'so so':1,'보통':1,'약함':1,'good':2,'well':2,'양호':2,'wnl':3,'WNL':3,'normal':3,'정상':3},
+      opj_spinal:  {'-':0,'없음':0,'압박골절':1,'척추관협착증':2,'hivd':3,'HIVD':3,'디스크':3,'척추수술':4,'낙상':5,'외상':5,'기타':6},
+      opj_cvs_result:{'WNL':0,'wnl':0,'폴립':1,'폴립제거':1,'선종':2,'암':3,'기타':4},
+      sex:         {'Female':0,'Male':1,'여':0,'남':1,'female':0,'male':1},
+      // DEXA 텍스트 → 코드
+      who_class:   {'Underweight':0,'Normal':1,'Overweight':2,'Obese':3,'underweight':0,'normal':1,'overweight':2,'obese':3,'정상체중':1,'과체중':2,'비만':3,'저체중':0},
+      osteo_dx:    {'정상':0,'골감소증':1,'Osteopenia':1,'osteopenia':1,'골다공증':2,'Osteoporosis':2,'osteoporosis':2},
+      sarco_dx:    {'없음':0,'정상':0,'근감소증 전단계':1,'근감소증':2,'중증 근감소증':3},
+      // 마노메트리 텍스트 → 코드
+      sphincter_tone:{'저하':1,'감소':1,'정상':2,'normal':2,'증가':3,'increased':3},
+      rair_result: {'Positive':1,'positive':1,'양성':1,'Negative':0,'negative':0,'음성':0},
+      cough_ref:   {'Positive':1,'positive':1,'양성':1,'Negative':0,'negative':0,'음성':0},
+      bet:         {'Normal':1,'normal':1,'정상':1,'Abnormal':0,'abnormal':0,'비정상':0,'Not done':9,'not done':9},
+      bd_rectal_result:{'Normal elevation (>45mmHg)':1,'Normal elevation':1,'Insufficient elevation':0,'Decreased':0},
+      bd_anal_result:{'Normal relaxation (>20%)':1,'Normal relaxation':1,'Incomplete relaxation':0,'Paradoxical contraction':2}
+    };
+    // +/- → 0/1 변환이 필요한 나머지 필드들
+    var binaryPlusMinus=['opj_prev_ar_yn'];
+    Object.keys(convMap).forEach(function(k){
+      if(parsed[k]!==undefined){
+        var v=String(parsed[k]);
+        var mapped=convMap[k][v];
+        if(mapped!==undefined) parsed[k]=mapped;
+      }
+    });
+
+    // opj_onset 텍스트 → opj_onset_yr 숫자 추출
+    // 모든 _yr 필드 자동 계산 (2년전, 2YA, 2006년 등)
+    var yrFields=['opj_onset_yr','opj_spinal_yr','opj_cvs_yr','opj_prev_ar_yr','opj_hyst_yr','opj_htn_yr','opj_hl_yr','opj_ui_yr','opj_menopause_yr','opj_cardiac_yr','opj_hematologic_yr','opj_cancer_yr'];
+    yrFields.forEach(function(k){
+      // opj_onset_yr는 opj_onset에서도 가져옴
+      if(k==='opj_onset_yr'&&!parsed[k]&&parsed.opj_onset)parsed[k]=parsed.opj_onset;
+      if(parsed[k]!==undefined&&parsed[k]!==''){
+        var calc=parseYrText(parsed[k]);
+        if(calc!=='')parsed[k]=calc;
+      }
+    });
+
+    // opj_bowel "+/-" 또는 "-/-" → constipation/diarrhea 분리
+    if(parsed.opj_bowel!==undefined&&parsed.opj_constipation===undefined){
+      var bv=String(parsed.opj_bowel).trim();
+      var bm=bv.match(/([+\-])\s*[\/,]\s*([+\-])/);
+      if(bm){
+        parsed.opj_constipation=bm[1]==='+'?1:0;
+        parsed.opj_diarrhea=bm[2]==='+'?1:0;
+      } else if(bv==='-'||bv==='0'){
+        parsed.opj_constipation=0; parsed.opj_diarrhea=0;
+      }
+    }
+
+    // opj_para 텍스트 → 분만 필드 분리
+    if(parsed.opj_para!==undefined&&!parsed.opj_para_total){
+      var ps=String(parsed.opj_para);
+      if(/^0$/.test(ps.trim())||/^없음$/.test(ps.trim())){parsed.opj_para_na=2;} // Para:0 = 기혼 분만력없음 (미혼인지 알 수 없으므로 기혼무산 처리)
+      else{
+        var vtot=ps.match(/(\d+)\s*[\/명]/);if(vtot)parsed.opj_para_total=parseInt(vtot[1]);
+        var vvd=ps.match(/vd[\/\s]*(\d+)|(\d+)\s*vd/i);if(vvd)parsed.opj_para_vd=parseInt(vvd[1]||vvd[2]);
+        var vcs=ps.match(/c[\/.s]*sec[\/\s]*(\d+)|cs[\/\s]*(\d+)|(\d+)\s*cs/i);if(vcs)parsed.opj_para_cs=parseInt(vcs[1]||vcs[2]||vcs[3]);
+      }
+    }
+
+    // opj_prev_ar 텍스트 → prev_ar_yn 처리
+    if(parsed.opj_prev_ar!==undefined&&parsed.opj_prev_ar_yn===undefined){
+      var arv=String(parsed.opj_prev_ar).trim();
+      parsed.opj_prev_ar_yn=(arv==='-'||arv==='0')?0:1;
+    }
+
+    // opj_hyst 텍스트에 수술명 포함된 경우 분리
+    // 예: "-/2005년 자궁내막암 수술 TAH BSO" → hyst=1, hyst_type="TAH BSO", hyst_yr=20
+    if(parsed.opj_prev_ar!==undefined&&String(parsed.opj_prev_ar).includes('/')){
+      var hystPart=String(parsed.opj_prev_ar).split('/').slice(1).join('/').trim();
+      if(hystPart&&hystPart!=='-'&&hystPart!==''){
+        parsed.opj_hyst=1;
+        if(!parsed.opj_hyst_type)parsed.opj_hyst_type=hystPart;
+        var hystYrM=hystPart.match(/(\d{4})년/);
+        if(hystYrM&&!parsed.opj_hyst_yr){
+          parsed.opj_hyst_yr=new Date().getFullYear()-parseInt(hystYrM[1]);
+        }
+      }
+    }
+    // opj_past_hx에서 hyst_type 추출 보완
+    if(parsed.opj_hyst===1&&!parsed.opj_hyst_type&&parsed.opj_past_hx){
+      parsed.opj_hyst_type=String(parsed.opj_past_hx).replace(/\d{4}년\s*/,'').trim();
+      var pastYrM=String(parsed.opj_past_hx).match(/(\d{4})년/);
+      if(pastYrM&&!parsed.opj_hyst_yr)parsed.opj_hyst_yr=new Date().getFullYear()-parseInt(pastYrM[1]);
+    }
+
+    var count=0;
+    // DEXA/마노메트리 필드
+    ALL_FIELDS.forEach(id=>{
+      if(parsed[id]!==undefined&&String(parsed[id])!==''){
+        var e=document.getElementById(id);
+        if(e){e.value=parsed[id];var p=e.closest('.field');if(p)p.classList.add('filled');count++;}
+      }
+    });
+    // ── 키 이름 정규화 (Gemini가 다른 키명으로 반환하는 경우 처리) ──
+    var keyAlias={
+      'opj_prev_ar':'opj_prev_ar_yn',
+      'opj_onset':'opj_onset_yr',
+      'opj_bowel': null,
+    };
+    // Prev. CVS 파싱: "2YA, WNL" 또는 "+/2YA/WNL"
+    if(parsed.opj_cvs&&parsed.opj_cvs_yn===undefined){
+      var cv=String(parsed.opj_cvs);
+      if(cv==='-'||cv==='없음'){
+        parsed.opj_cvs_yn='0';
+      } else {
+        parsed.opj_cvs_yn='1';
+        var cyrm=cv.match(/(\d+)\s*(?:ya|년|y)/i); if(cyrm)parsed.opj_cvs_yr=cyrm[1];
+        if(/wnl|정상|normal/i.test(cv))parsed.opj_cvs_result='0';
+        else if(/폴립|polyp/i.test(cv))parsed.opj_cvs_result='1';
+        else if(/선종|adenoma/i.test(cv))parsed.opj_cvs_result='2';
+        else if(/암|cancer|malignancy/i.test(cv))parsed.opj_cvs_result='3';
+        else parsed.opj_cvs_result='4';
+        parsed.opj_cvs_detail=parsed.opj_cvs_detail||cv;
+      }
+    }
+    // Prev. AR 파싱: "-/-" → prev_ar_yn=0, hyst=0
+    if(parsed.opj_prev_ar_hyst){
+      var arh=String(parsed.opj_prev_ar_hyst);
+      var arhm=arh.match(/([+-])\s*\/\s*([+-])/);
+      if(arhm){
+        if(parsed.opj_prev_ar_yn===undefined)parsed.opj_prev_ar_yn=arhm[1]==='+'?'1':'0';
+        if(parsed.opj_hyst===undefined)parsed.opj_hyst=arhm[2]==='+'?'1':'0';
+      }
+    }
+    Object.keys(keyAlias).forEach(function(from){
+      var to=keyAlias[from];
+      if(parsed[from]!==undefined&&to&&parsed[to]===undefined){
+        parsed[to]=parsed[from];
+      }
+    });
+    // opj_bowel "-/-" → constipation/diarrhea 분리
+    if(parsed.opj_bowel){
+      var bm=String(parsed.opj_bowel).match(/([+-])\s*\/\s*([+-])/);
+      if(bm){if(parsed.opj_constipation===undefined)parsed.opj_constipation=bm[1];if(parsed.opj_diarrhea===undefined)parsed.opj_diarrhea=bm[2];}
+    }
+    // opj_spinal "-" → "없음" 정규화
+    if(parsed.opj_spinal==='-'||parsed.opj_spinal==='없음'||parsed.opj_spinal==='none')parsed.opj_spinal='0';
+    // opj_hyst "-" → 0 정규화  
+    if(parsed.opj_hyst==='-')parsed.opj_hyst='0';
+    if(parsed.opj_hyst==='+')parsed.opj_hyst='1';
+    // opj_prev_ar_yn "-" → 0
+    if(parsed.opj_prev_ar_yn==='-')parsed.opj_prev_ar_yn='0';
+    if(parsed.opj_prev_ar_yn==='+')parsed.opj_prev_ar_yn='1';
+    // opj_dementia "+/-" → 1/0
+    if(parsed.opj_dementia){
+      var dem=String(parsed.opj_dementia);
+      if(dem.startsWith('+')||/인지장애|치매|dementia/i.test(dem))parsed.opj_dementia='1';
+      else if(dem.startsWith('-')||dem==='없음'||dem==='0')parsed.opj_dementia='0';
+    }
+    // 유산균 명시적 처리 (Gemini가 "-", "없음", "복용안함" 등으로 반환)
+    if(parsed.opj_probiotics!==undefined){
+      var pb=String(parsed.opj_probiotics).trim();
+      // 숫자로 반환된 경우 그대로
+      if(pb==='0')parsed.opj_probiotics='0';
+      else if(pb==='1')parsed.opj_probiotics='1';
+      else if(pb==='2')parsed.opj_probiotics='2';
+      // 텍스트 처리
+      else if(pb==='-'||/없음|안함|안먹|복용안|미복|not taking/i.test(pb))parsed.opj_probiotics='0';
+      else if(pb==='+'||/복용중|먹는|먹고|taking/i.test(pb))parsed.opj_probiotics='1';
+      else if(/중단|stop|중지/i.test(pb))parsed.opj_probiotics='2';
+    }
+    // opj_dm, opj_htn, opj_hl, opj_ui, opj_menopause, opj_cancer +/- → 1/0
+    ['opj_dm','opj_htn','opj_hl','opj_ui','opj_menopause','opj_cancer'].forEach(function(k){
+      if(parsed[k]==='-')parsed[k]='0';
+      if(parsed[k]==='+')parsed[k]='1';
+    });
+    // opj_para 텍스트 파싱 → para_total, para_vd, para_na 등
+    // 예: "2, VD, 4.2kg" / "0" / "미혼" / "3/VD2/CS1" / "2 자연분만"
+    if(parsed.opj_para){
+      var ps=String(parsed.opj_para).trim();
+      if(/미혼/.test(ps)){
+        parsed.opj_para_na='1';
+      } else if(/^[-]$/.test(ps)||ps==='-'||ps==='없음'||ps==='해당없음'||ps==='0'||/기혼\s*무산/.test(ps)||ps==='기혼무산'){
+        parsed.opj_para_na='2';
+      } else {
+        parsed.opj_para_na='0'; // 분만력 있음
+        // 총 분만 횟수: 첫 번째 숫자
+        var ptm=ps.match(/^(\d+)/);
+        if(ptm)parsed.opj_para_total=parsed.opj_para_total||ptm[1];
+        // VD 횟수: "2, VD" / "VD 2" / "자연분만 2" / 숫자만 있고 VD 언급된 경우
+        var vdm=ps.match(/(\d+)\s*(?:자연|vd)/i)||ps.match(/(?:자연|vd)[^\d]*(\d+)/i);
+        if(vdm)parsed.opj_para_vd=parsed.opj_para_vd||vdm[1];
+        else if(ptm&&/vd|자연/i.test(ps))parsed.opj_para_vd=parsed.opj_para_vd||ptm[1];
+        // CS 횟수
+        var csm=ps.match(/(\d+)\s*(?:제왕|cs)/i)||ps.match(/(?:제왕|cs)[^\d]*(\d+)/i);
+        if(csm)parsed.opj_para_cs=parsed.opj_para_cs||csm[1];
+        // 최대 태아체중 (kg)
+        var wtm=ps.match(/(\d+\.?\d*)\s*kg/i);
+        if(wtm)parsed.opj_para_max_wt=parsed.opj_para_max_wt||wtm[1];
+      }
+    }
+    // onset 텍스트 → 숫자 (3YA → 3)
+    if(parsed.opj_onset_yr){
+      var oym=String(parsed.opj_onset_yr).match(/(\d+)/);
+      if(oym)parsed.opj_onset_yr=oym[1];
+    }
+
+    // 초진 필드
+    OPJ_FIELDS.forEach(id=>{
+
+      if(parsed[id]!==undefined&&String(parsed[id])!==''){
+        var e=document.getElementById(id);
+        if(e){
+          e.value=String(parsed[id]);  // select는 반드시 String으로 세팅
+          if(e.tagName==='SELECT'&&e.value===''&&parsed[id]!==undefined){
+            // 숫자/문자 둘 다 시도
+            e.value=String(parsed[id]);
+            if(e.value==='')e.value=parsed[id];
+          }
+          var p=e.closest('.field');if(p){p.classList.remove('filled');p.classList.add('filled-opj');}count++;
+        }
+      }
+    });
+
+    // opj_pmhx_list 처리 — 동적 행 추가
+    if(parsed.opj_pmhx_list&&Array.isArray(parsed.opj_pmhx_list)){
+      var pmhxContainer=document.getElementById('opj-pmhx-rows');
+      if(pmhxContainer){
+        pmhxContainer.innerHTML='';
+        parsed.opj_pmhx_list.forEach(function(item){
+          addPmhxRow();
+          var n=pmhxContainer.children.length-1;
+          var catEl=document.getElementById('opj_pmhx_'+n+'_cat');
+          var nameEl=document.getElementById('opj_pmhx_'+n+'_name');
+          var yrEl=document.getElementById('opj_pmhx_'+n+'_yr');
+          if(catEl&&item.cat!==undefined)catEl.value=String(item.cat);
+          if(nameEl&&item.name)nameEl.value=item.name;
+          if(yrEl&&item.yr)yrEl.value=item.yr;
+          count++;
+        });
+      }
+    }
+    // opj_pmhx 텍스트로 왔을 때 → 쉼표/세미콜론으로 분리해서 각각 행으로 추가
+    else if(parsed.opj_pmhx&&typeof parsed.opj_pmhx==='string'&&parsed.opj_pmhx.trim()){
+      var pmhxContainer=document.getElementById('opj-pmhx-rows');
+      if(pmhxContainer){
+        pmhxContainer.innerHTML='';
+        // 쉼표/세미콜론으로 분리
+        var pmhxItems=String(parsed.opj_pmhx).split(/[,;，]/).map(function(s){return s.trim();}).filter(Boolean);
+        // 이미 별도 필드로 처리되는 항목 제외 (중복 방지)
+        var excludeKeywords=['htn','고혈압','hl','이상지질혈증','고지혈증','dm','당뇨','diabetes',
+          'ui','요실금','폐경','menopause','심혈관','심장','cvd','cardiac',
+          '혈액','hematologic','암','cancer','종양'];
+        pmhxItems=pmhxItems.filter(function(item){
+          var lower=item.toLowerCase().trim();
+          // 이미 체크된 필드와 중복되는지 확인
+          var isDup=false;
+          if(/htn|고혈압/.test(lower)&&String(parsed.opj_htn)==='1')isDup=true;
+          if(/hl|이상지질|고지혈/.test(lower)&&String(parsed.opj_hl)==='1')isDup=true;
+          if(/dm|당뇨/.test(lower)&&String(parsed.opj_dm)==='1')isDup=true;
+          if(/요실금|ui/.test(lower)&&String(parsed.opj_ui)==='1')isDup=true;
+          if(/폐경|menopause/.test(lower)&&String(parsed.opj_menopause)==='1')isDup=true;
+          if(/심혈관|심장|cvd|pci|부정맥/.test(lower)&&String(parsed.opj_cardiac)==='1')isDup=true;
+          if(/혈액|hematologic/.test(lower)&&String(parsed.opj_hematologic)==='1')isDup=true;
+          if(/암|cancer|malignancy|종양/.test(lower)&&String(parsed.opj_cancer)==='1')isDup=true;
+          return !isDup;
+        });
+        // 계통 코드 매핑
+        var catKeyMap={
+          'htn':1,'고혈압':1,'hl':2,'이상지질':2,'고지혈':2,'ui':3,'요실금':3,
+          '폐경':4,'menopause':4,'암':5,'cancer':5,'종양':5,'혈액':6,'혈관':7,
+          '심장':7,'뇌':8,'치매':9,'파킨슨':10,'갑상선':11,'호흡':12,'폐':12,
+          '신장':13,'비뇨':13,'이비':14,'귀':14,'근골':15,'관절':15,'저혈압':7
+        };
+        pmhxItems.forEach(function(item){
+          // 질병명 정제: "병원명-질병명으로 약 드시고 계심" → "질병명"
+          var cleanItem=item.trim();
+          // "병원명-질병명" 패턴 분리 (한림대-자가면역간염 → 자가면역간염)
+          var hospitalMatch=cleanItem.match(/^[가-힣a-zA-Z]+(?:대|병원|의원|대학교?|센터)\s*[-–—]\s*(.+)$/);
+          if(hospitalMatch)cleanItem=hospitalMatch[1].trim();
+          // 부가설명 제거 ("으로 약 드시고 계심", "으로 치료 중" 등)
+          cleanItem=cleanItem.replace(/\s*(?:으로|로)\s*(?:약|치료|수술|시술|복용|관리|입원)[^,]*$/,'');
+          cleanItem=cleanItem.replace(/\s*[-–—]\s*(?:약\s*복용|치료|f\/u|추적)[^,]*/i,'');
+          cleanItem=cleanItem.trim();
+          if(!cleanItem)return;
+
+          addPmhxRow();
+          var n=pmhxContainer.children.length-1;
+          var catEl=document.getElementById('opj_pmhx_'+n+'_cat');
+          var nameEl=document.getElementById('opj_pmhx_'+n+'_name');
+          var yrEl=document.getElementById('opj_pmhx_'+n+'_yr');
+          if(nameEl)nameEl.value=cleanItem;
+          // 년도 자동 계산
+          var calcYr=parseYrText(item);
+          if(calcYr!==''&&yrEl)yrEl.value=calcYr;
+          // 계통 자동 매핑
+          var catCode=99;
+          var itemLower=cleanItem.toLowerCase();
+          Object.keys(catKeyMap).forEach(function(k){
+            if(itemLower.includes(k))catCode=catKeyMap[k];
+          });
+          if(catEl)catEl.value=String(catCode);
+          count++;
+        });
+      }
+    }
+
+    // Impression 체크박스 자동 체크 (PART2 텍스트 기반)
+    var impMap=[['imp_dec_resting',/decreased\s*anal\s*resting\s*pressure/i],['imp_dec_squeeze',/decreased\s*squeezing\s*pressure/i],['imp_inapp_rair',/inappropriate\s*RAIR/i],['imp_normal_cough',/normal\s*cough\s*reflex/i],['imp_dec_sensation',/decreased\s*rectal\s*sensation/i],['imp_success_bet',/successful\s*balloon\s*expulsion/i],['imp_fail_bet',/fail(ed)?\s*balloon\s*expulsion/i],['imp_insuff_elev',/insufficient\s*elevation.*rectal\s*pressure/i],['imp_paradox',/paradoxical\s*contraction/i]];
+    impMap.forEach(([id,re])=>{var e=document.getElementById(id);if(e&&re.test(raw)){e.checked=true;count++;}});
+
+    // Impression 체크박스 — PART1 수치값 기반 자동 추론
+    var impChecks={
+      'imp_dec_resting':  parsed.sphincter_tone===1||String(parsed.sphincter_tone)==='1'||parsed.rest_mean<40,
+      'imp_dec_squeeze':  parsed.sq_max!==undefined&&Number(parsed.sq_max)<80,
+      'imp_inapp_rair':   String(parsed.rair_result)==='0',
+      'imp_normal_cough': String(parsed.cough_ref)==='1',
+      'imp_dec_sensation':parsed.rs_min!==undefined&&Number(parsed.rs_min)>30,
+      'imp_success_bet':  String(parsed.bet)==='1',
+      'imp_fail_bet':     String(parsed.bet)==='0',
+      'imp_insuff_elev':  String(parsed.bd_rectal_result)==='0',
+      'imp_paradox':      String(parsed.bd_anal_result)==='2',
+    };
+    Object.keys(impChecks).forEach(function(id){
+      var e=document.getElementById(id);
+      if(e&&impChecks[id]&&!e.checked){e.checked=true;count++;}
+    });
+    // imp_text 자동 입력
+    var impTxtEl=document.getElementById('imp_text');
+    if(impTxtEl&&parsed.mano_imp&&!impTxtEl.value)impTxtEl.value=parsed.mano_imp;
+
+    // dob 자동 계산
+    if(parsed.dob){
+      var dobEl=document.getElementById('dob');
+      if(dobEl){dobEl.value=parsed.dob;dobEl.closest('.field').classList.add('filled');calcAgeFromDob(dobEl);}
+    }
+    // ── 원문 기반 재검증 (Gemini 오류 교정) ──
+    var rawTxt=String(parsed.opj_raw_text||parsed.opj_pi_text||'').toLowerCase();
+    // 유산균 원문 검증
+    if(rawTxt){
+      var probMatch=rawTxt.match(/유산균\s*([+\-])/);
+      if(probMatch){
+        parsed.opj_probiotics=probMatch[1]==='+'?1:0;
+      } else if(/유산균\s*복용\s*안|유산균\s*없|유산균\s*미/i.test(rawTxt)){
+        parsed.opj_probiotics=0;
+      } else if(/유산균\s*복용\s*중|유산균\s*먹/i.test(rawTxt)){
+        parsed.opj_probiotics=1;
+      }
+      // pi_ag_food (특정음식 악화) 원문 추론
+      if(parsed.pi_ag_food===undefined){
+        if(/국물|기름|특정\s*음식|먹으면|음식.*악|음식.*샘/i.test(rawTxt))parsed.pi_ag_food=1;
+        else parsed.pi_ag_food=0;
+      }
+      // pi_ag_postdefec (변본후 악화) 원문 추론
+      if(parsed.pi_ag_postdefec===undefined){
+        if(/변\s*본\s*후.*샘|변\s*본\s*후.*더|배변\s*후.*누출|대변.*보고.*새|변보고.*더/i.test(rawTxt))parsed.pi_ag_postdefec=1;
+        else parsed.pi_ag_postdefec=0;
+      }
+      // pi_ag_exercise (운동/걷기 악화) 원문 추론
+      if(parsed.pi_ag_exercise===undefined){
+        if(/걸을\s*때|걷다가|운동.*새|활동.*새|걷기/i.test(rawTxt))parsed.pi_ag_exercise=1;
+        else parsed.pi_ag_exercise=0;
+      }
+      // pi_tx 원문 추론
+      if(parsed.pi_tx_none===undefined&&parsed.pi_tx_drug===undefined){
+        if(/치료.*없|받은\s*적\s*없|이전\s*치료\s*없/i.test(rawTxt))parsed.pi_tx_none=1;
+        else if(/병원.*다녔|약.*먹|약.*복용|치료.*받/i.test(rawTxt))parsed.pi_tx_drug=1;
+      }
+      // opj_cardiac 원문 추론
+      if(parsed.opj_cardiac===undefined){
+        if(/cvd|cvа|심혈관|심장|pci|부정맥|뇌졸|뇌경색|stroke/i.test(rawTxt))parsed.opj_cardiac=1;
+      }
+      // smoking 원문 검증
+      var smokeMatch=rawTxt.match(/smoking\s*:\s*([+\-])/i)||rawTxt.match(/흡연\s*:\s*(있음|없음|현재|과거|[+\-])/i);
+      if(smokeMatch){
+        var sv=smokeMatch[1];
+        if(sv==='-'||sv==='없음')parsed.opj_smoking=0;
+        else if(sv==='+'||sv==='현재')parsed.opj_smoking=2;
+        else if(sv==='과거')parsed.opj_smoking=1;
+      }
+    }
+
+    // ── PI 체크박스 자동 처리 ──
+    var OPJ_CHK=window.OPJ_CHECKS||[];
+    OPJ_CHK.forEach(function(id){
+      if(parsed[id]!==undefined){
+        var el=document.getElementById(id);
+        if(el&&el.type==='checkbox'){
+          el.checked=(parsed[id]===1||parsed[id]==='1'||parsed[id]===true);
+          if(el.checked)count++;
+        }
+      }
+    });
+    if(parsed.pi_tx_other){var pto=document.getElementById('pi_tx_other');if(pto)pto.value=parsed.pi_tx_other;}
+
+    // ── PI 체크박스 원문 추론 (Gemini가 누락했을 때 보완) ──
+    var piRaw=(parsed.opj_raw_text||parsed.opj_pi_text||'').toLowerCase();
+    var piTrigger=(parsed.opj_trigger||'').toLowerCase();
+    var piAll=piRaw+' '+piTrigger;
+    var anyPiChecked=OPJ_CHK.some(function(id){var e=document.getElementById(id);return e&&e.checked;});
+    if(!anyPiChecked&&piAll.trim()){
+      var inferMap={
+        'pi_sit_passive': ['나도 모르게','모르게','수동','passive','느끼지 못','감각 없','감각없'],
+        'pi_sit_postdefec': ['변 본 후','변보고','배변 후','잔변','post defec','after defec'],
+        'pi_sit_strain': ['힘줄 때','힘줄때','힘을 줄','strain'],
+        'pi_sit_nocturnal': ['수면 중','자다가','잘 때','밤에','nocturnal','sleep'],
+        'pi_sit_urge': ['절박','urge','갑자기','급박','참지 못','참지못'],
+        'pi_sx_gas': ['가스','방귀','gas'],
+        'pi_sx_mucus': ['점액','mucus','끈적'],
+        'pi_sx_liquid': ['묽은','liquid','물변','설사','diarrhea'],
+        'pi_sx_solid': ['덩어리','solid','고체','변이 새'],
+        'pi_lk_leak': ['조금씩','새다','leakage','leak','묻어'],
+        'pi_lk_soiling': ['속옷','팬티','soiling','오염'],
+        'pi_pad': ['패드','pad','휴지','항상'],
+        'pi_ag_loose': ['묽은 변','연변','loose'],
+        'pi_ag_diarrhea': ['설사','diarrhea'],
+        'pi_ag_cough': ['기침','재채기','cough'],
+        'pi_ag_stress': ['긴장','스트레스','stress'],
+        'pi_ag_postdefec': ['변 본 후 악화','배변 후 새'],
+        'pi_ag_exercise': ['운동','걷기','exercise'],
+        'pi_crs_worsening': ['점점','악화','심해'],
+        'pi_crs_intermittent': ['간헐','좋아졌다','반복'],
+        'pi_crs_recent_worse': ['최근','갑자기','recent'],
+        'pi_tx_none': ['이전 치료 없','치료 받은 적 없','치료력 없','prev tx: -'],
+        'pi_tx_drug': ['약물','약 복용','medication','drug'],
+        'pi_tx_bio': ['바이오피드백','biofeedback'],
+        'pi_tx_pfe': ['골반저','kegel','pelvic floor'],
+        'pi_tx_op': ['수술','operation','surgery'],
+        'pi_tx_electric': ['전기','sacral','snm','ptns']
+      };
+      Object.keys(inferMap).forEach(function(id){
+        var keywords=inferMap[id];
+        var hit=keywords.some(function(kw){return piAll.includes(kw);});
+        if(hit){
+          var el=document.getElementById(id);
+          if(el&&el.type==='checkbox'&&!el.checked){el.checked=true;count++;}
+        }
+      });
+    }
+
+    // ── 초진 원문 저장 ──
+
+
+    updateCompletion();calcASMM();
+
+    // 초진 원문 저장 - Gemini JSON의 opj_pi_text 또는 raw_text
+    var rawTgt=document.getElementById('opj_raw_text');
+    if(rawTgt){
+      var rawVal=parsed.opj_raw_text||parsed.raw_text||parsed.opj_pi_text||'';
+      if(rawVal.trim())rawTgt.value=rawVal.trim();
+    }
+
+    // PART2: REPORT → DEXA 뷰어
+    var reportPart='';
+    var p2m=raw.match(/==PART2:\s*REPORT==\s*([\s\S]*?)==ENDPART2==/i);
+    if(p2m) reportPart=p2m[1].trim();
+    else if(/DXA Full Report|Bone Mineral Density|Total BMD/i.test(raw)) reportPart=raw;
+    if(reportPart){
+      var pt=parseReportText(reportPart)||{};
+      // PART1 JSON 값으로 보완 (PART2에서 못 파싱한 것들)
+      ['height','weight','bmi','sex','age','dob',
+       'total_fat_pct','total_lean_g','total_bmc_g','asmm','asmi','ag_ratio',
+       'android_fat_pct','gynoid_fat_pct','bmd_total','ya_tscore','am_zscore',
+       'osteo_dx','sarco_dx','who_class','bmi_dxa'
+      ].forEach(function(k){if(parsed[k]!==undefined&&pt[k]===undefined)pt[k]=parsed[k];});
+      if(pt.bmd_total||pt.total_fat_pct||pt.ya_tscore||pt.height)renderDexaViewer([pt]);
+    }
+
+    document.getElementById('json-paste').value='';
+    showToast(count>0?'✅ '+count+'개 입력 완료! PI 구조화 자동 실행 중...':'값을 찾지 못했어요.');
+  });
+
+  // 리포트 텍스트에서 직접 파싱
+  function parseReportText(txt){
+    var p={};
+    function ex(re){var m=txt.match(re);return m?m[1].trim():null;}
+    var sexAge=ex(/성별[\/\s]*연령[:\s]+([^\n]+)/i)||ex(/Age\/Sex[:\s]+([^\n]+)/i);
+    if(sexAge){p.sex=/female|여/i.test(sexAge)?'Female':'Male';var am=sexAge.match(/(\d+)/);if(am)p.age=parseInt(am[1]);}
+    var hw=ex(/신장[\/\s]*체중[:\s]+([^\n]+)/i)||ex(/Height[\/\s]*Weight[:\s]+([^\n]+)/i);
+    if(hw){var hm=hw.match(/([\d.]+)\s*cm/i);var wm=hw.match(/([\d.]+)\s*kg/i);if(hm)p.height=parseFloat(hm[1]);if(wm)p.weight=parseFloat(wm[1]);}
+    var bmiM=ex(/BMI[:\s]+([\d.]+)/i);if(bmiM)p.bmi=parseFloat(bmiM);
+    var tbmd=ex(/Total\s*BMD[:\s]+([\d.]+)/i);if(tbmd)p.bmd_total=parseFloat(tbmd);
+    var ts=ex(/T-score[^:\n]*[:\s]+([+-]?[\d.]+)/i);if(ts)p.ya_tscore=parseFloat(ts);
+    var zs=ex(/Z-score[^:\n]*[:\s]+([+-]?[\d.]+)/i);if(zs)p.am_zscore=parseFloat(zs);
+    if(/골다공증/.test(txt)&&!/골감소/.test(txt))p.osteo_dx='골다공증';
+    else if(/골감소증|Osteopenia/i.test(txt))p.osteo_dx='골감소증';
+    else p.osteo_dx='정상';
+    var fatM=ex(/Total\s*Fat[^:\n]*[:\s]+([\d.]+)\s*%/i);if(fatM)p.total_fat_pct=parseFloat(fatM);
+    var leanM=ex(/Total\s*Lean\s*Mass[^:\n]*[:\s]+([\d,]+)\s*g/i);if(leanM)p.total_lean_g=parseInt(leanM.replace(/,/g,''));
+    else{var leanK=ex(/Total\s*Lean\s*Mass[^:\n]*[:\s]+([\d.]+)\s*kg/i);if(leanK)p.total_lean_g=Math.round(parseFloat(leanK)*1000);}
+    var asmmM=ex(/ASMM[:\s]+([\d.]+)\s*kg/i);if(asmmM)p.asmm=parseFloat(asmmM);
+    var smiM=ex(/SMI[^:\n]*[:\s]+([\d.]+)\s*kg/i);if(smiM)p.asmi=parseFloat(smiM);
+    if(p.asmi&&p.sex){p.sarco_status=p.asmi>=(p.sex==='Male'?7.0:5.4)?'정상':'근감소증';}
+    var agM=ex(/A\/G\s*Ratio[:\s]+([\d.]+)/i);if(agM)p.ag_ratio=parseFloat(agM);
+    var andM=ex(/Android[:\s]+([\d.]+)\s*%/i);if(andM)p.android_fat_pct=parseFloat(andM);
+    var gynM=ex(/Gynoid[:\s]+([\d.]+)\s*%/i);if(gynM)p.gynoid_fat_pct=parseFloat(gynM);
+    // 종합소견 추출
+    var impM=txt.match(/\[종합\s*소견[^\]]*\]([\s\S]*?)(?:\[|$)/i);
+    if(impM)p.imp_summary=impM[1].trim().slice(0,300);
+    // 마노메트리 추출
+    var manoM=txt.match(/\[Anorectal\s*Manometry[^\]]*\]([\s\S]*?)(?:\[|$)/i)||txt.match(/ARM\s*:([\s\S]*?)(?:\[종합|$)/i);
+    if(manoM)p.mano_imp=manoM[1].trim().slice(0,500);
+    // 전체 리포트 원문 저장
+    p.full_report=txt.trim();
+    return (p.bmd_total||p.total_fat_pct||p.ya_tscore)?p:null;
+  }
+}); // end DOMContentLoaded
+init();
+</script>
+</body>
+</html>
