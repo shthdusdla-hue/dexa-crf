@@ -1240,16 +1240,33 @@ function fillNAEmpty(){
   showToast('✅ 빈 항목 '+filled+'개에 N/A 입력 완료');
 }
 function updateCompletion(){
-  var n1=OPJ_FIELDS.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
-  var nm=MANO_FIELDS.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
+  // 핵심 필수 필드만으로 완성도 계산
+  var CORE_OPJ=['opj_date','opj_cc','opj_fisi','opj_wexner','opj_onset_yr','opj_episode','opj_constipation','opj_diarrhea','opj_loose','opj_defecation','opj_smoking','opj_para_na','opj_dm','opj_resting_tone','opj_squeeze','opj_muschel','opj_assessment','opj_plan'];
+  // 분만력 없음(미혼=1, 기혼무산=2)이면 VD/CS/총분만 제외
+  var paraNA=document.getElementById('opj_para_na');
+  var paraVal=paraNA?paraNA.value:'';
+  var CORE_OPJ2=CORE_OPJ.slice();
+  if(paraVal===''||paraVal==='0'){
+    // 분만력 있음 - 총분만/VD/CS 포함
+    CORE_OPJ2.push('opj_para_total');
+  }
+  // CVS 했으면 결과 포함
+  var cvsYN=document.getElementById('opj_cvs_yn');
+  if(cvsYN&&cvsYN.value==='1') CORE_OPJ2.push('opj_cvs_result');
+
+  var CORE_MANO=['mano_date','rest_mean','sq_max','rair','rair_result'];
+  var CORE_DEXA=['meas_date','bmd_total','ya_tscore','total_fat_pct','total_lean_g'];
+
+  var n1=CORE_OPJ2.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
+  var nm=CORE_MANO.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
   var pct;
   if(currentDexaDone===true){
-    // DEXA 시행: 초진+마노메트리+DEXA 전체
-    var n2=ALL_FIELDS.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
-    pct=Math.round((n1+n2)/(OPJ_FIELDS.length+ALL_FIELDS.length)*100);
+    var n2=CORE_DEXA.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
+    pct=Math.round((n1+nm+n2)/(CORE_OPJ2.length+CORE_MANO.length+CORE_DEXA.length)*100);
+  }else if(currentDexaDone===false){
+    pct=Math.round((n1+nm)/(CORE_OPJ2.length+CORE_MANO.length)*100);
   }else{
-    // DEXA 미시행/미선택: 초진+마노메트리 기준
-    pct=Math.round((n1+nm)/(OPJ_FIELDS.length+MANO_FIELDS.length)*100);
+    pct=Math.round(n1/CORE_OPJ2.length*100);
   }
   pct=Math.min(pct,100);
   document.getElementById('completion-pct').textContent=pct+'%';
@@ -1382,13 +1399,20 @@ async function saveRecord(){
   }
   // records 항상 최신 동기화
   if(window._records)records=window._records;
-  var n1=OPJ_FIELDS.filter(id=>d[id]&&d[id]!=='').length;
-  var nm=MANO_FIELDS.filter(id=>d[id]&&d[id]!=='').length;
+  var CORE_OPJ_S=['opj_date','opj_cc','opj_fisi','opj_wexner','opj_onset_yr','opj_episode','opj_constipation','opj_diarrhea','opj_loose','opj_defecation','opj_smoking','opj_para_na','opj_dm','opj_resting_tone','opj_squeeze','opj_muschel','opj_assessment','opj_plan'];
+  if(d.opj_para_na===''||d.opj_para_na==='0') CORE_OPJ_S.push('opj_para_total');
+  if(d.opj_cvs_yn==='1') CORE_OPJ_S.push('opj_cvs_result');
+  var CORE_MANO_S=['mano_date','rest_mean','sq_max','rair','rair_result'];
+  var CORE_DEXA_S=['meas_date','bmd_total','ya_tscore','total_fat_pct','total_lean_g'];
+  var n1=CORE_OPJ_S.filter(id=>d[id]&&d[id]!=='').length;
+  var nm=CORE_MANO_S.filter(id=>d[id]&&d[id]!=='').length;
   if(currentDexaDone===true){
-    var n2=ALL_FIELDS.filter(id=>d[id]&&d[id]!=='').length;
-    d._completion=Math.min(Math.round((n1+n2)/(OPJ_FIELDS.length+ALL_FIELDS.length)*100),100);
+    var n2=CORE_DEXA_S.filter(id=>d[id]&&d[id]!=='').length;
+    d._completion=Math.min(Math.round((n1+nm+n2)/(CORE_OPJ_S.length+CORE_MANO_S.length+CORE_DEXA_S.length)*100),100);
+  }else if(currentDexaDone===false){
+    d._completion=Math.min(Math.round((n1+nm)/(CORE_OPJ_S.length+CORE_MANO_S.length)*100),100);
   }else{
-    d._completion=Math.min(Math.round((n1+nm)/(OPJ_FIELDS.length+MANO_FIELDS.length)*100),100);
+    d._completion=Math.min(Math.round(n1/CORE_OPJ_S.length*100),100);
   }
   var ex=records.find(r=>r.study_id===d.study_id);
   if(ex&&ex._fireId)d._fireId=ex._fireId;
