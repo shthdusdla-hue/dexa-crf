@@ -935,7 +935,7 @@ window.deleteFromFirebase=async function(fid){
 
 <!-- 로그인 화면 -->
 <script>
-let records=[],currentStudyId=generateId(),currentDexaDone=null,currentListFilter='all',selectedIds=new Set();
+let records=[],currentStudyId=generateId(),currentDexaDone=null,currentListFilter='all',selectedIds=new Set(),currentIsNew=true;
 const OPJ_FIELDS=['opj_date','opj_cc','opj_pain','opj_pi_text','opj_raw_text','pi_tx_other','opj_probiotics','opj_htn','opj_htn_yr','opj_hl','opj_hl_yr','opj_ui','opj_ui_yr','opj_menopause','opj_menopause_yr','opj_cardiac','opj_cardiac_yr','opj_hematologic','opj_hematologic_yr','opj_cancer','opj_cancer_yr','opj_cancer_memo','opj_fi_gas','opj_fi_mucus','opj_fi_liquid','opj_fi_solid','opj_fisi','opj_wx_solid','opj_wx_liquid','opj_wx_gas','opj_wx_pad','opj_wx_life','opj_wexner','opj_cvs_yn','opj_cvs_result','opj_cvs_detail','opj_cvs_yr','opj_onset_yr','opj_onset_detail','opj_episode','opj_constipation','opj_diarrhea','opj_diarrhea_freq','opj_loose','opj_defecation','opj_bss','opj_bss_range','opj_cvs_findings','opj_smoking_detail','opj_surgery_json','opj_spinal','opj_spinal_detail','opj_spinal_yr','opj_dementia','opj_bmi_raw','opj_smoking','opj_smoking_yr','opj_smoking_ppd','opj_smoking_py','opj_prev_ar_yn','opj_prev_ar_type','opj_prev_ar_yr','opj_prev_ar_detail','opj_hyst','opj_hyst_type','opj_hyst_yr','opj_para_na','opj_para_total','opj_para_vd','opj_para_cs','opj_para_forceps','opj_para_max_wt','opj_dm','opj_dm_memo','opj_skin_irr','opj_patulus','opj_perineal','opj_stool_stain','opj_feces','opj_resting_tone','opj_squeeze','opj_muschel','opj_assessment','opj_plan','opj_memo'];
 var MANO_FIELDS=['mano_date','sphincter_tone','rest_mean','rest_vec','sq_max','sq_vec','sus_dur','sph_len','hpz','rs_min','rs_urg','cv_max','rair','rair_result','cough_pct','cough_ref','bet','bet_min','bd_rectal_pr','bd_anal_pr','bd_rectal_result','bd_anal_result','mano_timing','mano_seq','imp_text'];
 var OPJ_CHECKS=['pi_sit_passive','pi_sit_postdefec','pi_sit_strain','pi_sit_nocturnal','pi_sit_urge','pi_sx_gas','pi_sx_mucus','pi_sx_liquid','pi_sx_solid','pi_lk_leak','pi_lk_soiling','pi_pad','pi_ag_dairy','pi_ag_fruit','pi_ag_food','pi_ag_other','pi_ag_diarrhea','pi_ag_loose','pi_ag_cough','pi_ag_stress','pi_ag_postdefec','pi_ag_exercise','pi_crs_worsening','pi_crs_intermittent','pi_crs_recent_worse','pi_tx_none','pi_tx_drug','pi_tx_bio','pi_tx_pfe','pi_tx_op','pi_tx_electric'];
@@ -1385,20 +1385,22 @@ function switchMain(view){
 }
 function newRecord(){
   clearForm();
+  currentIsNew=true;
   var doGenerate=function(){
-    currentStudyId=generateId();
-    // 생성된 ID가 기존 records와 충돌하는지 한 번 더 확인
+    // 타임스탬프 기반 유니크 번호로 충돌 원천 차단
+    var yr=new Date().getFullYear();
     var allRecs=window._records||records||[];
-    while(allRecs.some(function(r){return r.study_id===currentStudyId;})){
-      currentStudyId=generateId();
-    }
+    var usedNums=new Set();
+    allRecs.forEach(function(r){
+      if(r.study_id){var m=r.study_id.match(/DM-(\d+)-/);if(m)usedNums.add(parseInt(m[1]));}
+    });
+    var n=1;while(usedNums.has(n))n++;
+    currentStudyId='DM-'+String(n).padStart(4,'0')+'-'+yr;
     document.getElementById('study_id').value=currentStudyId;
     switchMain('form');
   };
   if(typeof window.loadFromFirebase==='function'){
-    window.loadFromFirebase().then(doGenerate).catch(function(){
-      doGenerate(); // 로드 실패해도 기존 records 기반으로 ID 생성
-    });
+    window.loadFromFirebase().then(doGenerate).catch(doGenerate);
   }else{
     doGenerate();
   }
@@ -1430,6 +1432,7 @@ function getFormData(){
 function loadRecord(idx){
   var r=records[idx];
   if(!r)return;
+  currentIsNew=false;
   currentStudyId=r.study_id;
   currentDexaDone=r.dexa_done===1?true:r.dexa_done===0?false:null;
   document.getElementById('study_id').value=r.study_id;
@@ -1497,8 +1500,11 @@ async function saveRecord(){
   }else{
     d._completion=Math.min(Math.round((n1+nm)/(CORE_OPJ_S.length+CORE_MANO_S.length)*100),100);
   }
-  var ex=records.find(r=>r.study_id===d.study_id);
-  if(ex&&ex._fireId)d._fireId=ex._fireId;
+  // 기존 레코드 편집 시에만 _fireId 복사 (새 환자면 절대 복사 안 함)
+  if(!currentIsNew){
+    var ex=records.find(r=>r.study_id===d.study_id);
+    if(ex&&ex._fireId)d._fireId=ex._fireId;
+  }
   showToast('저장 중...');
   var ok=await window.saveToFirebase(d);
   if(ok){
