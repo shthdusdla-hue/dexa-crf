@@ -191,7 +191,7 @@ body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg3);color
     <span id="db-status" style="font-size:11px;color:var(--text2);padding:4px 8px;background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border)">⏳ DB 연결 중...</span>
     <span id="user-email-display" style="font-size:11px;color:var(--text2);padding:4px 8px;background:var(--bg2);border-radius:var(--radius);border:0.5px solid var(--border)"></span>
     <button class="btn btn-secondary" onclick="doSignOut()" style="font-size:12px;">로그아웃</button>
-    <button class="btn btn-secondary" onclick="switchMain('form')">데이터 입력</button>
+    <button class="btn btn-secondary" onclick="newRecord()">데이터 입력</button>
     <button class="btn btn-secondary" onclick="switchMain('list')">기록 목록</button>
     <button class="btn btn-secondary" onclick="switchMain('help')" style="border-color:var(--blue);color:var(--blue);">📋 사용 설명서</button>
     <button class="btn btn-secondary" onclick="exportCodebook()" style="border-color:var(--purple);color:var(--purple);">📖 코드북 추출</button>
@@ -976,14 +976,16 @@ function generateId(){
   return 'DM-'+String(n).padStart(4,'0')+'-'+yr;
 }
 function init(){
-  // Firebase 로드 후 study_id 갱신
-  setTimeout(function(){
-    currentStudyId=generateId();
-    var sid=document.getElementById('study_id');
-    if(sid)sid.value=currentStudyId;
-  },1500);
   document.getElementById('study_id').value=currentStudyId;
   document.getElementById('meas_date').value=new Date().toISOString().slice(0,10);
+  // Firebase 로드 완료 후 study_id 재생성 (새 환자 상태일 때만)
+  window.addEventListener('firebaseReady', function(){
+    if(currentIsNew){
+      currentStudyId=generateId();
+      var sid=document.getElementById('study_id');
+      if(sid)sid.value=currentStudyId;
+    }
+  },{once:true});
 }
 function checkDupRegNo(val){
   var warn=document.getElementById('reg-no-warn');
@@ -1405,7 +1407,7 @@ function newRecord(){
     doGenerate();
   }
 }
-function clearForm(){ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled');}});OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled-opj');}});[...CHECKBOX_FIELDS,...(window.OPJ_CHECKS_DYNAMIC||[])].forEach(id=>{var e=document.getElementById(id);if(e)e.checked=false;});document.getElementById('reg_no').value='';document.getElementById('json-paste').value='';document.getElementById('opj-parsed-card').style.display='none';var oc=document.getElementById('opj-check-content');if(oc)oc.textContent='— 내용을 입력하면 여기에 원문 형식으로 표시됩니다 —';currentDexaDone=null;setDexaDone(null);var stb=document.getElementById('surgery-tbody');if(stb)stb.innerHTML='';var shid=document.getElementById('opj_surgery_json');if(shid)shid.value='';var sdw=document.getElementById('smoking-detail-wrap');if(sdw)sdw.style.display='none';updateCompletion();}
+function clearForm(){currentIsNew=true;ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled');}});OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled-opj');}});[...CHECKBOX_FIELDS,...(window.OPJ_CHECKS_DYNAMIC||[])].forEach(id=>{var e=document.getElementById(id);if(e)e.checked=false;});document.getElementById('reg_no').value='';document.getElementById('json-paste').value='';document.getElementById('opj-parsed-card').style.display='none';var oc=document.getElementById('opj-check-content');if(oc)oc.textContent='— 내용을 입력하면 여기에 원문 형식으로 표시됩니다 —';currentDexaDone=null;setDexaDone(null);var stb=document.getElementById('surgery-tbody');if(stb)stb.innerHTML='';var shid=document.getElementById('opj_surgery_json');if(shid)shid.value='';var sdw=document.getElementById('smoking-detail-wrap');if(sdw)sdw.style.display='none';updateCompletion();}
 function getFormData(){
   var d={study_id:currentStudyId,reg_no:document.getElementById('reg_no').value,meas_date:document.getElementById('meas_date').value,dexa_done:currentDexaDone===true?1:currentDexaDone===false?0:''};
   ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e)d[id]=e.value;});
