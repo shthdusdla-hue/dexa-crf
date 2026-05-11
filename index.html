@@ -1388,31 +1388,29 @@ function switchMain(view){
   }
 }
 function newRecord(){
-  clearForm();
+  try{ clearForm(); }catch(e){ console.error('clearForm error:',e); }
   currentIsNew=true;
-  // 폼을 먼저 열고 (임시 ID)
-  currentStudyId='DM-????-'+new Date().getFullYear();
+  currentStudyId=generateId();
   var sid=document.getElementById('study_id');
   if(sid)sid.value=currentStudyId;
   switchMain('form');
-  // Firebase 로드 후 올바른 ID로 업데이트
-  var doUpdateId=function(){
-    var allRecs=window._records||records||[];
-    var usedNums=new Set();
-    allRecs.forEach(function(r){
-      if(r.study_id){var m=r.study_id.match(/DM-(\d+)-/);if(m)usedNums.add(parseInt(m[1]));}
-    });
-    var n=1;while(usedNums.has(n))n++;
-    currentStudyId='DM-'+String(n).padStart(4,'0')+'-'+new Date().getFullYear();
-    if(sid)sid.value=currentStudyId;
-  };
-  if(typeof window.loadFromFirebase==='function'){
-    window.loadFromFirebase().then(doUpdateId).catch(doUpdateId);
-  }else{
-    doUpdateId();
-  }
 }
-function clearForm(){currentIsNew=true;ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled');}});OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled-opj');}});[...CHECKBOX_FIELDS,...(window.OPJ_CHECKS_DYNAMIC||[])].forEach(id=>{var e=document.getElementById(id);if(e)e.checked=false;});document.getElementById('reg_no').value='';document.getElementById('json-paste').value='';document.getElementById('opj-parsed-card').style.display='none';var oc=document.getElementById('opj-check-content');if(oc)oc.textContent='— 내용을 입력하면 여기에 원문 형식으로 표시됩니다 —';currentDexaDone=null;setDexaDone(null);var stb=document.getElementById('surgery-tbody');if(stb)stb.innerHTML='';var shid=document.getElementById('opj_surgery_json');if(shid)shid.value='';var sdw=document.getElementById('smoking-detail-wrap');if(sdw)sdw.style.display='none';updateCompletion();}
+function clearForm(){
+  currentIsNew=true;
+  ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled');}});
+  OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled-opj');}});
+  [...CHECKBOX_FIELDS,...(window.OPJ_CHECKS_DYNAMIC||[])].forEach(id=>{var e=document.getElementById(id);if(e)e.checked=false;});
+  var rn=document.getElementById('reg_no');if(rn)rn.value='';
+  var jp=document.getElementById('json-paste');if(jp)jp.value='';
+  var opc=document.getElementById('opj-parsed-card');if(opc)opc.style.display='none';
+  var oc=document.getElementById('opj-check-content');if(oc)oc.textContent='— 내용을 입력하면 여기에 원문 형식으로 표시됩니다 —';
+  currentDexaDone=null;
+  try{setDexaDone(null);}catch(e){}
+  var stb=document.getElementById('surgery-tbody');if(stb)stb.innerHTML='';
+  var shid=document.getElementById('opj_surgery_json');if(shid)shid.value='';
+  var sdw=document.getElementById('smoking-detail-wrap');if(sdw)sdw.style.display='none';
+  try{updateCompletion();}catch(e){}
+}
 function getFormData(){
   var d={study_id:currentStudyId,reg_no:document.getElementById('reg_no').value,meas_date:document.getElementById('meas_date').value,dexa_done:currentDexaDone===true?1:currentDexaDone===false?0:''};
   ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e)d[id]=e.value;});
