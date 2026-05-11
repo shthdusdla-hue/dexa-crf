@@ -1390,27 +1390,26 @@ function switchMain(view){
 function newRecord(){
   clearForm();
   currentIsNew=true;
-  // 항상 최신 Firebase records 로드 후 ID 생성
-  var doAfterLoad=function(){
-    currentStudyId=generateId();
-    // 혹시 충돌하면 다시 생성 (절대 안전장치)
+  // 폼을 먼저 열고 (임시 ID)
+  currentStudyId='DM-????-'+new Date().getFullYear();
+  var sid=document.getElementById('study_id');
+  if(sid)sid.value=currentStudyId;
+  switchMain('form');
+  // Firebase 로드 후 올바른 ID로 업데이트
+  var doUpdateId=function(){
     var allRecs=window._records||records||[];
-    var tries=0;
-    while(allRecs.some(function(r){return r.study_id===currentStudyId;})&&tries<100){
-      currentStudyId=generateId();
-      tries++;
-    }
-    var sid=document.getElementById('study_id');
+    var usedNums=new Set();
+    allRecs.forEach(function(r){
+      if(r.study_id){var m=r.study_id.match(/DM-(\d+)-/);if(m)usedNums.add(parseInt(m[1]));}
+    });
+    var n=1;while(usedNums.has(n))n++;
+    currentStudyId='DM-'+String(n).padStart(4,'0')+'-'+new Date().getFullYear();
     if(sid)sid.value=currentStudyId;
-    switchMain('form');
   };
   if(typeof window.loadFromFirebase==='function'){
-    window.loadFromFirebase().then(doAfterLoad).catch(function(e){
-      console.error('loadFromFirebase error in newRecord:', e);
-      doAfterLoad(); // 오류 나도 기존 records 기반으로 진행
-    });
+    window.loadFromFirebase().then(doUpdateId).catch(doUpdateId);
   }else{
-    doAfterLoad();
+    doUpdateId();
   }
 }
 function clearForm(){currentIsNew=true;ALL_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled');}});OPJ_FIELDS.forEach(id=>{var e=document.getElementById(id);if(e){e.value='';var p=e.closest('.field');if(p)p.classList.remove('filled-opj');}});[...CHECKBOX_FIELDS,...(window.OPJ_CHECKS_DYNAMIC||[])].forEach(id=>{var e=document.getElementById(id);if(e)e.checked=false;});document.getElementById('reg_no').value='';document.getElementById('json-paste').value='';document.getElementById('opj-parsed-card').style.display='none';var oc=document.getElementById('opj-check-content');if(oc)oc.textContent='— 내용을 입력하면 여기에 원문 형식으로 표시됩니다 —';currentDexaDone=null;setDexaDone(null);var stb=document.getElementById('surgery-tbody');if(stb)stb.innerHTML='';var shid=document.getElementById('opj_surgery_json');if(shid)shid.value='';var sdw=document.getElementById('smoking-detail-wrap');if(sdw)sdw.style.display='none';updateCompletion();}
