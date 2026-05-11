@@ -209,7 +209,6 @@ body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg3);color
     <div class="id-box"><label>작성일</label><input type="date" id="meas_date"></div>
     <button class="btn btn-secondary" onclick="newRecord()">+ 새 환자</button>
   </div>
-  <div class="notice">⚠ 등록번호는 데이터 매칭 확인용으로만 사용되며, 엑셀 내보내기 시 <strong>별도 시트(ID Mapping)</strong>에만 보관됩니다.</div>
 
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab(0)">📋 입력</button>
@@ -764,7 +763,7 @@ body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg3);color
     <div style="margin-bottom:24px">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--blue)">1. 웹사이트 접속 및 로그인</h3>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <tr style="background:var(--bg2)"><td style="padding:8px 12px;font-weight:600;width:160px">사이트 주소</td><td style="padding:8px 12px"><a href="https://shthdusdla-hue.github.io/dexa-crf/" target="_blank" style="color:var(--blue)">https://shthdusdla-hue.github.io/dexa-crf/</a></td></tr>
+        <tr style="background:var(--bg2)"><td style="padding:8px 12px;font-weight:600;width:160px">사이트 주소</td><td style="padding:8px 12px"><a href="https://colorectalsurgeon95-create.github.io/dexa-crf/" target="_blank" style="color:var(--blue)">https://colorectalsurgeon95-create.github.io/dexa-crf/</a></td></tr>
         <tr><td style="padding:8px 12px;font-weight:600">로그인 계정</td><td style="padding:8px 12px">colorectalsurgeon95@gmail.com (구글 계정)</td></tr>
         <tr style="background:var(--bg2)"><td style="padding:8px 12px;font-weight:600">로그인 방법</td><td style="padding:8px 12px">사이트 접속 → Google 계정으로 로그인 버튼 클릭</td></tr>
       </table>
@@ -785,7 +784,7 @@ body{font-family:'Noto Sans KR',system-ui,sans-serif;background:var(--bg3);color
     <div style="margin-bottom:24px">
       <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--blue)">3. 웹사이트 코드 업데이트 (GitHub)</h3>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
-        <tr style="background:var(--bg2)"><td style="padding:8px 12px;font-weight:600;width:160px">GitHub 저장소</td><td style="padding:8px 12px"><a href="https://github.com/shthdusdla-hue/dexa-crf" target="_blank" style="color:var(--blue)">https://github.com/shthdusdla-hue/dexa-crf</a></td></tr>
+        <tr style="background:var(--bg2)"><td style="padding:8px 12px;font-weight:600;width:160px">GitHub 저장소</td><td style="padding:8px 12px"><a href="https://github.com/colorectalsurgeon95-create/dexa-crf" target="_blank" style="color:var(--blue)">https://github.com/colorectalsurgeon95-create/dexa-crf</a></td></tr>
         <tr><td style="padding:8px 12px;font-weight:600">업데이트 방법</td><td style="padding:8px 12px">index.html 클릭 → ✏️ 클릭 → 전체 교체 → Commit changes</td></tr>
       </table>
       <div style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 14px;margin-top:10px;font-size:13px">
@@ -1306,7 +1305,7 @@ function getRowData(containerId){
 }
 function calcASMM(){var aL=parseFloat(document.getElementById('arms_lean_g').value)||0,lL=parseFloat(document.getElementById('legs_lean_g').value)||0,h=parseFloat(document.getElementById('height').value)||0,sx=document.getElementById('sex').value,ae=document.getElementById('asmm'),ai=document.getElementById('asmi'),sd=document.getElementById('sarco_dx');if(aL>0&&lL>0){var asmm=(aL+lL)/1000;ae.value=asmm.toFixed(2);ae.closest('.field').classList.add('filled');if(h>0){var hm=h/100,asmi=asmm/(hm*hm);ai.value=asmi.toFixed(2);ai.closest('.field').classList.add('filled');if(sd){sd.value=asmi<(sx==='Male'?7.0:5.4)?'근감소증':'없음';sd.closest('.field').classList.add('filled');}}}else{ae.value='';ai.value='';ae.closest('.field').classList.remove('filled');ai.closest('.field').classList.remove('filled');}}
 function fillNAEmpty(){
-  var skipIds=new Set(['reg_no','json-paste','study_id','completion-pct','asmm','asmi','sarco_dx','opj_bmi_raw','bmi','bmi_dxa']);
+  var skipIds=new Set(['reg_no','json-paste','study_id','completion-pct','asmm','asmi','sarco_dx','opj_bmi_raw','bmi','bmi_dxa','opj_fisi','opj_wexner']);
   var filled=0;
   var formEl=document.getElementById('main-form');
   if(!formEl)return;
@@ -1323,18 +1322,14 @@ function fillNAEmpty(){
 function updateCompletion(){
   // 핵심 필수 필드만으로 완성도 계산
   var CORE_OPJ=['opj_date','opj_cc','opj_fisi','opj_wexner','opj_onset_yr','opj_episode','opj_constipation','opj_diarrhea','opj_loose','opj_defecation','opj_smoking','opj_para_na','opj_dm','opj_resting_tone','opj_squeeze','opj_muschel','opj_assessment','opj_plan'];
-  // 분만력 없음(미혼=1, 기혼무산=2)이면 VD/CS/총분만 제외
   var paraNA=document.getElementById('opj_para_na');
   var paraVal=paraNA?paraNA.value:'';
   var CORE_OPJ2=CORE_OPJ.slice();
-  if(paraVal===''||paraVal==='0'){
-    // 분만력 있음 - 총분만/VD/CS 포함
-    CORE_OPJ2.push('opj_para_total');
-  }
-  // CVS 했으면 결과 포함
+  if(paraVal===''||paraVal==='0') CORE_OPJ2.push('opj_para_total');
   var cvsYN=document.getElementById('opj_cvs_yn');
   if(cvsYN&&cvsYN.value==='1') CORE_OPJ2.push('opj_cvs_result');
 
+  // 마노메트리 항상 필수
   var CORE_MANO=['mano_date','rest_mean','sq_max','rair','rair_result'];
   var CORE_DEXA=['meas_date','bmd_total','ya_tscore','total_fat_pct','total_lean_g'];
 
@@ -1344,10 +1339,9 @@ function updateCompletion(){
   if(currentDexaDone===true){
     var n2=CORE_DEXA.filter(id=>{var e=document.getElementById(id);return e&&e.value!=='';}).length;
     pct=Math.round((n1+nm+n2)/(CORE_OPJ2.length+CORE_MANO.length+CORE_DEXA.length)*100);
-  }else if(currentDexaDone===false){
-    pct=Math.round((n1+nm)/(CORE_OPJ2.length+CORE_MANO.length)*100);
   }else{
-    pct=Math.round(n1/CORE_OPJ2.length*100);
+    // DEXA 미시행 또는 미선택 모두 마노메트리는 항상 포함
+    pct=Math.round((n1+nm)/(CORE_OPJ2.length+CORE_MANO.length)*100);
   }
   pct=Math.min(pct,100);
   document.getElementById('completion-pct').textContent=pct+'%';
@@ -1491,10 +1485,8 @@ async function saveRecord(){
   if(currentDexaDone===true){
     var n2=CORE_DEXA_S.filter(id=>d[id]&&d[id]!=='').length;
     d._completion=Math.min(Math.round((n1+nm+n2)/(CORE_OPJ_S.length+CORE_MANO_S.length+CORE_DEXA_S.length)*100),100);
-  }else if(currentDexaDone===false){
-    d._completion=Math.min(Math.round((n1+nm)/(CORE_OPJ_S.length+CORE_MANO_S.length)*100),100);
   }else{
-    d._completion=Math.min(Math.round(n1/CORE_OPJ_S.length*100),100);
+    d._completion=Math.min(Math.round((n1+nm)/(CORE_OPJ_S.length+CORE_MANO_S.length)*100),100);
   }
   var ex=records.find(r=>r.study_id===d.study_id);
   if(ex&&ex._fireId)d._fireId=ex._fireId;
@@ -2396,7 +2388,17 @@ document.addEventListener('DOMContentLoaded',function(){
     var p1m=raw.match(/==PART1:\s*JSON==\s*([\s\S]*?)==ENDPART1==/i);
     if(p1m) jsonPart=p1m[1];
     var parsed={};
-    try{var m=jsonPart.match(/\{[\s\S]*\}/);if(m)parsed=JSON.parse(m[0]);}catch(e){}
+    var parseErr='';
+    try{
+      var clean=jsonPart.replace(/^```(?:json)?\n?/im,'').replace(/```\s*$/m,'').trim();
+      var jm=clean.match(/\{[\s\S]*\}/);
+      if(jm){
+        var jsonStr=jm[0].replace(/,\s*([}\]])/g,'$1');
+        parsed=JSON.parse(jsonStr);
+      } else { parseErr='JSON 블록을 찾지 못했어요.'; }
+    }catch(e2){ parseErr='JSON 파싱 오류: '+e2.message; }
+    if(parseErr){ showToast('⚠️ '+parseErr); console.error('JSON parse fail:', parseErr, jsonPart.slice(0,300)); return; }
+    if(Object.keys(parsed).length===0){ showToast('⚠️ 빈 JSON이에요. Gemini 답변을 확인해주세요.'); return; }
 
     // ── 텍스트값 → 숫자코드 자동 변환 ──
     var convMap={
