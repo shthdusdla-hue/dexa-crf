@@ -901,13 +901,15 @@ onAuthStateChanged(auth, user=>{
 window.loadFromFirebase=async function(){
   try{
     const snap=await getDocs(query(collection(db,COL),orderBy('study_id')));
-    window._records=[];
-    snap.forEach(d=>window._records.push({_fireId:d.id,...d.data()}));
+    var tmp=[];
+    snap.forEach(d=>tmp.push({_fireId:d.id,...d.data()}));
+    window._records=tmp; // 성공 시에만 교체 (중간에 빈 배열 되는 것 방지)
     if(typeof renderList==='function')renderList();
     if(typeof updateStatus==='function')updateStatus('✅ DB 연결됨 — '+window._records.length+'명 로드');
   }catch(e){
     console.error('Firebase load error:',e);
     if(typeof updateStatus==='function')updateStatus('⚠️ DB 오류: '+e.message);
+    // 오류 시 기존 records 유지 (초기화하지 않음)
   }
 };
 
@@ -1385,11 +1387,18 @@ function newRecord(){
   clearForm();
   var doGenerate=function(){
     currentStudyId=generateId();
+    // 생성된 ID가 기존 records와 충돌하는지 한 번 더 확인
+    var allRecs=window._records||records||[];
+    while(allRecs.some(function(r){return r.study_id===currentStudyId;})){
+      currentStudyId=generateId();
+    }
     document.getElementById('study_id').value=currentStudyId;
     switchMain('form');
   };
   if(typeof window.loadFromFirebase==='function'){
-    window.loadFromFirebase().then(doGenerate);
+    window.loadFromFirebase().then(doGenerate).catch(function(){
+      doGenerate(); // 로드 실패해도 기존 records 기반으로 ID 생성
+    });
   }else{
     doGenerate();
   }
